@@ -6,7 +6,7 @@
 
 Un Script tout simple pour exporter ses données de visionnage SensCritique dans un fichier .CSV compatible avec Letterboxd.
 
-➡️ ➡️ ➡️ [Accès à l'instance principale.](https://senscritique2letterboxd.phileas.tv) ⬅️ ⬅️ ⬅️
+➡️ ➡️ ➡️ [Accès à l'instance principale.](https://sc2bx.phileas.tv) ⬅️ ⬅️ ⬅️
 
 ##   😶 Pourquoi
 
