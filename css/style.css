@@ -1,0 +1,237 @@
+:root {
+  --dark: #18191c;
+  --grey: #202225;
+  --red: #e74c3c;
+  --green: #0ad06f;
+  --blue: #428cff;
+  --bg: var(--dark);
+  --bg2: var(--grey);
+  --text: white;
+  --headerheight: 100px;
+  color-scheme: dark;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;700&display=swap');
+
+body {
+  background-color: var(--dark);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.logo {
+  width: var(--headerheight);
+}
+
+#header-center {
+  text-align: center;
+}
+
+#header-right {
+  width: var(--headerheight);
+}
+
+#header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  background-color: black;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  align-items: center;
+}
+
+#submit,
+#nextpage {
+  font-weight: 700;
+  background-color: var(--green);
+  border: 0;
+  padding: 5px;
+  border-radius: 17px;
+  color: white;
+  cursor: pointer;
+}
+
+#main-content {
+  padding-top: var(--headerheight);
+}
+
+.poster {
+  border-width: 0px;
+  border-style: solid;
+  border-color: var(--green);
+  border-radius: 10px;
+  height: 160px;
+  width: 100px;
+  margin: 9px;
+  margin-top: 0px;
+  object-fit: cover;
+  max-width: 100%;
+  transform: scale(0);
+  transition: 1s;
+  box-sizing: border-box;
+}
+
+img.poster:hover {
+  transform: scale(1.3) !important;
+  box-shadow: 10px 10px 20px black;
+  z-index: 5;
+  border-width: 6px;
+}
+
+img.animate {
+  transform: scale(1) !important;
+}
+
+.success {
+  border-width: 3px;
+}
+
+.failed {
+  border-width: 3px;
+  border-color: var(--red);
+}
+
+.wishlist {
+  border-width: 3px;
+  border-color: var(--blue);
+}
+
+#posterlist {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: left;
+}
+
+#welcome-explainer {
+  text-align: center;
+}
+
+/* from https://www.w3schools.com/howto/howto_js_snackbar.asp */
+/* The snackbar - position it at the bottom and in the middle of the screen */
+#snackbar {
+  visibility: hidden;
+  /* Hidden by default. Visible on click */
+  min-width: 250px;
+  /* Set a default minimum width */
+  margin-left: -125px;
+  /* Divide value of min-width by 2 */
+  background-color: #333;
+  /* Black background color */
+  color: #fff;
+  /* White text color */
+  text-align: center;
+  /* Centered text */
+  border-radius: 2px;
+  /* Rounded borders */
+  padding: 16px;
+  /* Padding */
+  position: fixed;
+  /* Sit on top of the screen */
+  z-index: 1;
+  /* Add a z-index if needed */
+  left: 50%;
+  /* Center the snackbar */
+  bottom: 30px;
+  /* 30px from the bottom */
+}
+
+/* Show the snackbar when clicking on a button (class added with JavaScript) */
+#snackbar.show {
+  visibility: visible;
+  /* Show the snackbar */
+  /* Add animation: Take 0.5 seconds to fade in and out the snackbar.
+However, delay the fade out process for 2.5 seconds */
+  -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+#export-info-box {
+  visibility: hidden;
+  /* Hidden by default. Visible on click */
+  min-width: 250px;
+  /* Set a default minimum width */
+  margin-left: -125px;
+  /* Divide value of min-width by 2 */
+  background-color: #333;
+  /* Black background color */
+  color: #fff;
+  /* White text color */
+  text-align: center;
+  /* Centered text */
+  border-radius: 2px;
+  /* Rounded borders */
+  padding: 16px;
+  /* Padding */
+  position: fixed;
+  /* Sit on top of the screen */
+  z-index: 1;
+  /* Add a z-index if needed */
+  left: 35%;
+  /* Center the snackbar */
+  bottom: 35%;
+  /* 30px from the bottom */
+  width: 50%;
+}
+
+/* Show the snackbar when clicking on a button (class added with JavaScript) */
+#export-info-box.show {
+  visibility: visible;
+  -webkit-animation: fadein 0.5s;
+  animation: fadein 0.5s
+}
+
+/* Animations to fade the snackbar in and out */
+@-webkit-keyframes fadein {
+  from {
+      bottom: 0;
+      opacity: 0;
+  }
+
+  to {
+      bottom: 30px;
+      opacity: 1;
+  }
+}
+
+@keyframes fadein {
+  from {
+      bottom: 0;
+      opacity: 0;
+  }
+
+  to {
+      bottom: 30px;
+      opacity: 1;
+  }
+}
+
+@-webkit-keyframes fadeout {
+  from {
+      bottom: 30px;
+      opacity: 1;
+  }
+
+  to {
+      bottom: 0;
+      opacity: 0;
+  }
+}
+
+@keyframes fadeout {
+  from {
+      bottom: 30px;
+      opacity: 1;
+  }
+
+  to {
+      bottom: 0;
+      opacity: 0;
+  }
+}

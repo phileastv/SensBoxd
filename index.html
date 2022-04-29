@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <title>SensBoxd</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script defer src="src/index.js" charset="uts-8"></script>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+    <div id="header" class="header">
+        <div id="header-left" class="header-left">
+            <a href="./">
+                <img class="logo" src="./img/Sens2Boxd-logo.svg" />
+            </a>
+        </div>
+        <div id="header-center" class="header-center">
+            <div class="form">
+                <form id="form">
+                    <div>
+                        <div id="usernameinputgroup">
+                            <label>Username SC:</label>
+                            <input id="username" name="username" type="username">
+                        </div>
+
+                        </br>
+                        <div id="numberinputgroup">
+                            <label for="numbertoload">Nombre d'items à charger :</label>
+                            <input id="numbertoload" type="number" value="25" max="1000" min="1" style="width: 4em;">
+                            <input id="submit" type="submit" value="Et zé parti !">
+                        </div>
+                    </div>
+                    <div>
+
+                    </div>
+                </form>
+                <!-- <button id="nextpage" style="display: none" type="button">Charger la page suivante.</button> -->
+            </div>
+
+            <div id="loader" style="display: none">Je mouline je mouline...</div>
+        </div>
+        <div id="header-right" class="header-right">
+            <button id="export" style="opacity: 0" onclick="exportDiary()">Exporter !</button>
+        </div>
+
+
+    </div>
+
+    <div id="snackbar"></div>
+    <div id="export-info-box"></div>
+    </div>
+
+    <div id="main-content">
+        <div class="left"></div>
+        <div id="posterlist">
+        </div>
+        <div class="right"></div>
+    </div>
+    <div id="welcome-explainer">
+        <h1>👉 SensCritique2Letterboxd 👈</h1>
+        <img style="width: 15vh;" src="./img/welcome-gif.gif" />
+        <p><br />Plop ! Voici un outil pour exporter ta collection SensCritique dans le format .CSV adapt&eacute; pour Letterboxd !</p>
+        <p><br /><strong>✨ Entre ton username SensCritique en haut, et z&eacute;&eacute;&eacute;&eacute; parti ! ✨<br /></strong></p>
+        <p><br />Une fois que tu as tous les films qu'il te faut, clique sur le bouton "Exporter" en haut &agrave; droite.</p>
+        <h2><br />😶 Pourquoi</h2>
+        <p>Il y a de plus en plus d'int&eacute;r&ecirc;t &agrave; avoir un profil complet SensCritique et Letterboxd : les deux plateformes deviennent de plus en plus compl&eacute;mentaires et gagnent chaqu&rsquo;une en force tous les jours.</p>
+        <p>Ce projet vient simplement de l'envie d'avoir un profil Letterboxd complet &agrave; partir de mes donn&eacute;es SensCritique.</p>
+        <p>Vous pouvez utiliser cet outil toutes les semaines/mois pour remplir toutes vos donn&eacute;es manquantes sur Letterboxd !</p>
+        <h2><br />⚙️ Comment &ccedil;a marche ?</h2>
+        <p>Cet outil utilise un petit script Javascript execut&eacute; en local, qui r&eacute;cup&egrave;re les donn&eacute;es de l'utilisateur depuis la nouvelle version de SensCritique.</p>
+        <p>Vous obtiendrez &agrave; la fin un fichier .CSV contenant tous vos films, la note &amp; la date de visionnage que vous avez entr&eacute;es sur SensCritique, qu'il est ensuite possible <a href="https://letterboxd.com/import/">d'importer sur Letterboxd</a>.</p>
+        <br /><a href="https://github.com/phileastv/SensCritique2Letterboxd">Voir ce projet sur Github.</a> <br />Ceci un projet personnel non affili&eacute; &agrave; SensCritique, SensCritique.com ou SENSCRITIQUE SARL, et n'utilise aucune de leurs technologies ou code priv&eacute;.</div>
+
+</body>
+
+</html>
