@@ -1,4 +1,4 @@
-# SensCritique2️⃣Letterboxd
+# SensBoxd
 
 ### 👉 Passer de SensCritique à Letterboxd 👈
 
