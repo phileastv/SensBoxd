@@ -73,7 +73,11 @@ function loadNewPageFromQueryData(queryData) {
         type: "POST",
         data: queryData,
         dataType: "json",
+        crossDomain: true,
         contentType: "application/json",
+        xhrFields: {
+            withCredentials: true
+        },
         success: function(data) {
             if (data[0].data.user == null) {
                 showSnackbar("Nous n'avons pas pû récupérer ton profil. Est-il bien défini en public ?");
