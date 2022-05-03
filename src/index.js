@@ -41,34 +41,29 @@ $(document).ready(function() {
         e.preventDefault();
         showLoader();
 
-        var username = $("#username").val();
-        var numberToLoad = $("#numbertoload").val();
+        window.username = $("#username").val();
+        window.numberToLoad = $("#numbertoload").val();
+        window.offset = 0;
+        if ($("#loadallprofile").is(":checked") == true) {
+            window.loadallcollection = true;
+            window.numberToLoad = 25;
+        } else {
+            window.loadallcollection = false;
+        }
+        document.querySelector('#welcome-explainer').innerHTML = "";
+        document.getElementById("posterlist").innerHTML = "";
+        document.getElementById("submit").style.display = 'none';
         document.querySelector('#usernameinputgroup').innerHTML = "";
         document.querySelector('#numberinputgroup').innerHTML = "<h3>Le SensCritique de " + username + "</h3>";
-        localStorage.setItem("username", username);
-        localStorage.setItem("numberToLoad", numberToLoad);
-        if ($("#continuous").checked == true) {
-            this.loop = true;
-        } else {
-            this.loop = false;
-        }
-        loadNewPageFromQueryData(defineQueryData(username, numberToLoad))
-    });
-
-    $('#nextpage').click(function(e) {
-
-        showLoader();
-        var username = localStorage.getItem("username");
-        var numberToLoad = $("#numbertoload").val();
-        loadNewPageFromQueryData(defineQueryData(username, numberToLoad))
-
+        loadNewPageFromQueryData()
     });
 });
 
 
 
-function loadNewPageFromQueryData(queryData) {
-    $.ajax({
+async function loadNewPageFromQueryData() {
+    var queryData = defineQueryData(window.username, window.numberToLoad);
+    await $.ajax({
         url: params.url,
         type: "POST",
         data: queryData,
@@ -83,9 +78,6 @@ function loadNewPageFromQueryData(queryData) {
                 showSnackbar("Nous n'avons pas pû récupérer ton profil. Est-il bien défini en public ?");
                 hideLoader();
             } else {
-                document.querySelector('#welcome-explainer').innerHTML = "";
-                document.getElementById("posterlist").innerHTML = "";
-                //document.getElementById("submit").style.display = 'none';
                 var movies = data[0].data.user.collection.products;
                 movies.forEach(element => {
                     if (element.universe == 1) {
@@ -98,6 +90,10 @@ function loadNewPageFromQueryData(queryData) {
                 hideLoader();
                 // showNextPageButton();
                 showExportButton();
+                if(window.loadallcollection) {
+                    window.offset = window.offset + window.numberToLoad;
+                    loadNewPageFromQueryData();
+                }
             }
         }
     });
@@ -115,7 +111,7 @@ function defineQueryData(username, numberToLoad) {
             genreId: null,
             keywords: null,
             limit: parseInt(numberToLoad),
-            offset: 0,
+            offset: window.offset,
             order: "LAST_ACTION_DESC",
             universe: null,
             username: username,
