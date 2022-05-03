@@ -72,11 +72,11 @@ function loadNewPageFromQueryData(queryData) {
         url: params.url,
         type: "POST",
         data: queryData,
-        dataType: "json",
+        dataType: "jsonp",
         crossDomain: true,
         contentType: "application/json",
-        xhrFields: {
-            withCredentials: true
+        headers: {
+            "Access-Control-Allow-Origin": params.url
         },
         success: function(data) {
             if (data[0].data.user == null) {
