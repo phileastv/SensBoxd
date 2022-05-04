@@ -54,7 +54,7 @@ $(document).ready(function() {
         document.getElementById("posterlist").innerHTML = "";
         document.getElementById("submit").style.display = 'none';
         document.querySelector('#usernameinputgroup').innerHTML = "";
-        document.querySelector('#numberinputgroup').innerHTML = "<h3>Le SensCritique de " + username + "</h3>";
+        document.querySelector('#numberinputgroup').innerHTML = "<div id='useravatar'></div><h3>Le SensCritique de " + username + "</h3>";
         loadNewPageFromQueryData()
     });
 });
@@ -67,17 +67,14 @@ async function loadNewPageFromQueryData() {
         url: params.url,
         type: "POST",
         data: queryData,
-        dataType: "jsonp",
-        crossDomain: true,
+        dataType: "json",
         contentType: "application/json",
-        headers: {
-            "Access-Control-Allow-Origin": params.url
-        },
         success: function(data) {
             if (data[0].data.user == null) {
                 showSnackbar("Nous n'avons pas pû récupérer ton profil. Est-il bien défini en public ?");
                 hideLoader();
             } else {
+                $("<img height='50' width='50' alt='profileavatar' src='" + data[0].data.user.medias.avatar + "'> </img>").appendTo("#useravatar");
                 var movies = data[0].data.user.collection.products;
                 movies.forEach(element => {
                     if (element.universe == 1) {
@@ -227,11 +224,13 @@ function exportToCsv(filename, rows) {
 
 function autoScroll() {
     if (params.autoScroll) {
-        window.scrollBy({
-            top: 999999999,
-            left: 0,
-            behavior: "smooth"
-        });
+        setTimeout(function(){
+            window.scrollBy({
+                top: 3000,
+                left: 0,
+                behavior: "smooth"
+            });
+        }, 1000);
     }
 }
 
