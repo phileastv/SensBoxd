@@ -54,7 +54,7 @@ $(document).ready(function() {
         document.getElementById("posterlist").innerHTML = "";
         document.getElementById("submit").style.display = 'none';
         document.querySelector('#usernameinputgroup').innerHTML = "";
-        document.querySelector('#numberinputgroup').innerHTML = "<div id='useravatar'></div><h3>Le SensCritique de " + username + "</h3>";
+        document.querySelector('#numberinputgroup').innerHTML = "<div id='useravatar'></div><h3 style='margin-top: 0px; margin-bottom: 0px;'>Le SensCritique de " + username + "</h3>";
         loadNewPageFromQueryData()
     });
 });
@@ -74,7 +74,9 @@ async function loadNewPageFromQueryData() {
                 showSnackbar("Nous n'avons pas pû récupérer ton profil. Est-il bien défini en public ?");
                 hideLoader();
             } else {
-                $("<img height='50' width='50' alt='profileavatar' src='" + data[0].data.user.medias.avatar + "'> </img>").appendTo("#useravatar");
+                if($('#useravatar > *').length == 0) {
+                    $("<img id='profileavatar' height='50' width='50' alt='profileavatar' src='" + data[0].data.user.medias.avatar + "'> </img>").appendTo("#useravatar");
+                }
                 var movies = data[0].data.user.collection.products;
                 movies.forEach(element => {
                     if (element.universe == 1) {
