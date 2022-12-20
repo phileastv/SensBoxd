@@ -5,6 +5,8 @@ MoviesDiary.push(columnsDiary);
 MovieWatchlist = [];
 MovieWatchlist.push(columnsWishlist);
 
+const regexCharToRemoveCsv = /[#,<\{\}\[\]\\\/]/g;
+
 const loader = document.querySelector('#loader')
 // const nextPageButton = document.querySelector("#nextpage");
 const exportButton = document.querySelector("#export");
@@ -174,13 +176,21 @@ function convertDateInYear(string) {
 
 function addMovieToJson(Title, Year, Directors, Rating10, WatchedDate, Watchlist, isDone) {
 
+    // Eviter les caractères spéciaux qui peuvent empecher la creation du CSV
+        
+    var TitleNoSpecialChar = Title.replace(regexCharToRemoveCsv, '');
+    var DirectorsNoSpecialChar = Directors.replace(regexCharToRemoveCsv, '');
+    var YearInt = parseInt(Year);
+    var Rating10Int = parseInt(Rating10);
+
     if (isDone == true) {
-        MoviesDiary.push([Title, Year, Directors, Rating10, WatchedDate]);
         console.log("✅ Ajouté au journal     ➡️ " + Title);
+        MoviesDiary.push([TitleNoSpecialChar, YearInt, DirectorsNoSpecialChar, Rating10Int, WatchedDate]);
+        
     }
 
     if (Watchlist == true) {
-        MovieWatchlist.push([Title, Year, Directors]);
+        MovieWatchlist.push([TitleNoSpecialChar, YearInt, DirectorsNoSpecialChar]);
         console.log("📝 Ajouté à la Watchlist ➡️ " + Title);
     }
 
@@ -191,7 +201,10 @@ function addMovieToJson(Title, Year, Directors, Rating10, WatchedDate, Watchlist
 function exportDiary() {
     document.querySelector('#export-info-box').className = "show";
     document.querySelector('#export-info-box').innerHTML = "<h2>Au top !</h2>" +
-        "<p><iframe src='https://www.youtube.com/embed/xklW7hq2kqg?autoplay=1' width=500 height=200 frameborder=0></iframe></p>" +
+        " <video width='320' height='240' controls autoplay>" +
+        "   <source src='./video/fantasticmrfox_whistle.mp4' type='video/mp4'>" +
+        "   Your browser does not support the video tag." +
+        " </video> " +
         "<p>Tu viens de t&eacute;l&eacute;charger le fichier .CSV contenant tous les films marqu&eacute;s en vert sur ton &eacute;cran.</p>" +
         "<p>Pour importer tes films sur Letterboxd, il te suffit maintenant d'<a target='_blank' rel='noopener noreferrer' href='https://letterboxd.com/import/'><strong>aller sur la page d'importation</strong></a> et de s&eacute;l&eacute;ctionner le .CSV t&eacute;l&eacute;charg&eacute; !</p>" +
         "<p>Il est également posible d'importer ta liste d'envies sur Letterboxd (films marqués en bleu sur ton écran). Il faut à ce moment aller sur https://letterboxd.com/TONPROFIL/watchlist/, et importer le CSV dispo ci-dessous.</p>" +
@@ -199,15 +212,13 @@ function exportDiary() {
         "<button onclick='hideExportInfoBox()'>Fermer</button>";
     var today = new Date();
     var date = today.getFullYear() + '.' + (today.getMonth() + 1) + '.' + today.getDate();
-    var username = localStorage.getItem("username");
-    exportToCsv(date + '_' + username + "_Diary.csv", MoviesDiary);
+    exportToCsv(date + ' Export de la Collection SensCritique de ' + window.username + ".csv", MoviesDiary);
 }
 
 function exportWishlist() {
     var today = new Date();
     var date = today.getFullYear() + '.' + (today.getMonth() + 1) + '.' + today.getDate();
-    var username = localStorage.getItem("username");
-    exportToCsv(date + '_' + username + "_Wishlist.csv", MovieWatchlist);
+    exportToCsv(date + ' Export de la Watchlist SensCritique de ' + window.username + ".csv", MovieWatchlist);
 }
 
 function exportToCsv(filename, rows) {
