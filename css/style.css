@@ -109,8 +109,224 @@ img.animate {
   justify-content: left;
 }
 
+/* Bento Layout Styles */
+.bento-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 20px;
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.bento-box {
+  background-color: var(--bg2);
+  border-radius: 15px;
+  padding: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bento-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.bento-box h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--green);
+  font-size: 1.4em;
+  font-weight: 700;
+}
+
+.bento-box h3 {
+  color: var(--blue);
+  font-size: 1.1em;
+  margin-bottom: 10px;
+}
+
+.bento-box p {
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.bento-box ul {
+  padding-left: 20px;
+}
+
+.bento-box li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.bento-box a {
+  color: var(--blue);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.bento-box a:hover {
+  color: var(--green);
+  text-decoration: underline;
+}
+
+/* Specific box layouts */
+.pourquoi-box {
+  grid-column: 1 / 3;
+}
+
+.comment-box {
+  grid-column: 3 / 4;
+}
+
+.changelog-box {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+}
+
+.faq-box {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+}
+
+.liens-box {
+  grid-column: 3 / 4;
+  grid-row: 2 / 3;
+}
+
+/* Changelog specific styles */
+.changelog-content {
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--blue) var(--grey);
+}
+
+.changelog-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.changelog-content::-webkit-scrollbar-track {
+  background: var(--grey);
+  border-radius: 4px;
+}
+
+.changelog-content::-webkit-scrollbar-thumb {
+  background: var(--blue);
+  border-radius: 4px;
+}
+
+.changelog-item {
+  border-left: 3px solid var(--blue);
+  padding-left: 15px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+}
+
+.changelog-version {
+  font-weight: 700;
+  color: var(--green);
+  font-size: 0.9em;
+}
+
+.changelog-date {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8em;
+  margin-bottom: 5px;
+}
+
+.changelog-description {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.changelog-details {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9em;
+}
+
+/* Personal links styles */
+.liens-list {
+  list-style: none;
+  padding: 0;
+}
+
+.liens-list li {
+  margin-bottom: 12px;
+}
+
+.liens-list a {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.liens-list a:hover {
+  background-color: rgba(66, 140, 255, 0.1);
+  text-decoration: none;
+}
+
+.link-icon {
+  margin-right: 10px;
+  font-size: 1.1em;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .bento-container {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, auto);
+  }
+  
+  .pourquoi-box {
+    grid-column: 1 / 3;
+  }
+  
+  .comment-box {
+    grid-column: 1 / 3;
+  }
+  
+  .changelog-box,
+  .faq-box,
+  .liens-box {
+    grid-column: span 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .bento-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 0 15px;
+  }
+  
+  .bento-box {
+    padding: 20px;
+  }
+  
+  .pourquoi-box,
+  .comment-box,
+  .changelog-box,
+  .faq-box,
+  .liens-box {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  
+  .changelog-content {
+    max-height: 300px;
+  }
+}
+
+/* Hide the original welcome explainer */
 #welcome-explainer {
-  text-align: center;
+  display: none;
 }
 
 /* from https://www.w3schools.com/howto/howto_js_snackbar.asp */

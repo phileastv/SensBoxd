@@ -1,0 +1,52 @@
+{
+  "changelog": [
+    {
+      "date": "2025-01-15",
+      "version": "v2.1.0",
+      "description": "Code refactoring complet - modularisation et état management",
+      "details": "Séparation du code en modules, nouvelle gestion d'état, élimination des variables globales"
+    },
+    {
+      "date": "2022-12-20",
+      "version": "v3.0.0",
+      "description": "🎄 Version majeure de Noël",
+      "details": "Mise à jour majeure avec nouvelles fonctionnalités et améliorations"
+    },
+    {
+      "date": "2022-05-04",
+      "version": "v2.3.0",
+      "description": "🔍 Améliorations SEO et avatar utilisateur",
+      "details": "Optimisation pour les moteurs de recherche et ajout de l'affichage de l'avatar utilisateur"
+    },
+    {
+      "date": "2022-05-04",
+      "version": "v2.2.0",
+      "description": "✅ Corrections et améliorations v2",
+      "details": "Diverses corrections de bugs et améliorations de stabilité"
+    },
+    {
+      "date": "2022-05-03",
+      "version": "v2.1.0",
+      "description": "💚 Corrections et nettoyage",
+      "details": "Suppression des messages temporaires et corrections diverses"
+    },
+    {
+      "date": "2022-05-01",
+      "version": "v2.0.0",
+      "description": "🐛 Correction majeure CORS et limites",
+      "details": "Résolution des problèmes CORS et suppression de la limite de 1000 éléments"
+    },
+    {
+      "date": "2022-04-29",
+      "version": "v1.2.0",
+      "description": "✏️ Support HTTPS et FAQ",
+      "details": "Correction pour le support HTTPS et ajout de la FAQ sur la page d'accueil"
+    },
+    {
+      "date": "2022-04-29",
+      "version": "v1.0.0",
+      "description": "✨ Première version publique",
+      "details": "Lancement initial de SensBoxd - outil de migration SensCritique vers Letterboxd"
+    }
+  ]
+} 

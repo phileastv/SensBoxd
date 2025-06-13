@@ -5,7 +5,12 @@
     <meta charset="utf-8">
     <title>SensBoxd</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-    <script defer src="src/index.js" charset="uts-8"></script>
+    <!-- Configuration and modules -->
+    <script defer src="src/config.js" charset="utf-8"></script>
+    <script defer src="src/graphql-queries.js" charset="utf-8"></script>
+    <script defer src="src/state-manager.js" charset="utf-8"></script>
+    <!-- Main application -->
+    <script defer src="src/index.js" charset="utf-8"></script>
     <link rel="stylesheet" href="./css/style.css">
 	<meta name="description" content="L'outil de migration simple pour passer de SensCritique à Letterboxd.">
     <meta property="og:title" content="Add title here">
@@ -69,15 +74,96 @@
         </div>
         <div class="right"></div>
     </div>
+
+    <!-- Bento Layout Section -->
+    <div class="bento-container">
+        <!-- Pourquoi ce projet - Large box spanning 2 columns -->
+        <div class="bento-box pourquoi-box">
+            <h2>😶 Pourquoi ce projet</h2>
+            <p>Il y a de plus en plus d'intérêt à avoir un profil complet SensCritique et Letterboxd : les deux plateformes deviennent de plus en plus complémentaires et gagnent chacune en force tous les jours.</p>
+            <p>Ce projet vient simplement de l'envie d'avoir un profil Letterboxd complet à partir de mes données SensCritique.</p>
+            <p>Vous pouvez utiliser cet outil toutes les semaines/mois pour remplir toutes vos données manquantes sur Letterboxd !</p>
+        </div>
+
+        <!-- Comment ça marche -->
+        <div class="bento-box comment-box">
+            <h2>⚙️ Comment ça marche</h2>
+            <p>Cet outil utilise un petit script Javascript exécuté en local, qui récupère les données de l'utilisateur depuis la nouvelle version de SensCritique.</p>
+            <p>Vous obtiendrez à la fin un fichier .CSV contenant tous vos films, la note & la date de visionnage que vous avez entrées sur SensCritique, qu'il est ensuite possible <a href="https://letterboxd.com/import/">d'importer sur Letterboxd</a>.</p>
+            <p><strong>✨ Entrez votre username SensCritique en haut, et zééééé parti ! ✨</strong></p>
+        </div>
+
+        <!-- Changelog - Scrollable box -->
+        <div class="bento-box changelog-box">
+            <h2>📋 Changelog</h2>
+            <div class="changelog-content" id="changelog-content">
+                <p>Chargement des mises à jour...</p>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="bento-box faq-box">
+            <h2>🙋‍♀️ FAQ</h2>
+            <h3>Et les critiques ?</h3>
+            <p><strong>Les critiques ne sont pas incluses dans l'export.</strong> D'un point de vue technique, il serait simple de les ajouter. Il est tout de même préférable de faire ce genre de choses à la main pour être sûr du formatage de chaque plateforme.</p>
+            
+            <h3>Et si je ne veux plus noter mes films ?</h3>
+            <p>Les notes seront incluses dans le .CSV, mais <strong>l'outil d'importation de Letterboxd comporte une case à cocher "Import Ratings" qu'il est possible de décocher</strong>.</p>
+            
+            <h3>J'ai déjà noté certains films sur Letterboxd</h3>
+            <p>Si la note est différente, <strong>Letterboxd la remplacera par celle de SensCritique</strong>.</p>
+        </div>
+
+        <!-- Liens personnels -->
+        <div class="bento-box liens-box">
+            <h2>🔗 Liens</h2>
+            <ul class="liens-list">
+                <li>
+                    <a href="https://github.com/phileastv/SensBoxd" target="_blank" rel="noopener noreferrer">
+                        <span class="link-icon">🔧</span>
+                        GitHub - Code source
+                    </a>
+                </li>
+                <li>
+                    <a href="https://github.com/phileastv/SensBoxd/issues" target="_blank" rel="noopener noreferrer">
+                        <span class="link-icon">🐛</span>
+                        Signaler un problème
+                    </a>
+                </li>
+                <li>
+                    <a href="https://phileas.tv" target="_blank" rel="noopener noreferrer">
+                        <span class="link-icon">🌐</span>
+                        Site web personnel
+                    </a>
+                </li>
+                <li>
+                    <a href="https://letterboxd.com/phileas_imt/" target="_blank" rel="noopener noreferrer">
+                        <span class="link-icon">📽️</span>
+                        Mon Letterboxd
+                    </a>
+                </li>
+                <li>
+                    <a href="https://www.senscritique.com/phileas_imt" target="_blank" rel="noopener noreferrer">
+                        <span class="link-icon">⭐</span>
+                        Mon SensCritique
+                    </a>
+                </li>
+            </ul>
+            <p style="font-size: 0.8em; color: rgba(255, 255, 255, 0.6); margin-top: 20px;">
+                Projet personnel non affilié à SensCritique, SensCritique.com ou SENSCRITIQUE SARL.
+            </p>
+        </div>
+    </div>
+
     <div id="welcome-explainer">
         <h1>👉 Migrer de SensCritique à Letterboxd 👈</h1>
         <img style="width: 15vh;" src="./img/welcome-gif.gif" />
         <p><br />Plop ! Voici un outil pour exporter ta collection SensCritique dans le format .CSV adapt&eacute; pour Letterboxd !</p>
         <p><br /><strong>✨ Entre ton username SensCritique en haut, et z&eacute;&eacute;&eacute;&eacute; parti ! ✨<br /></strong></p>
         <p><br />Une fois que tu as tous les films qu'il te faut, clique sur le bouton "Exporter" en haut &agrave; droite.</p>
-        <p><br /><br /><span style="color: #27ae60;"><strong>Mise &agrave; jour du 20 d&eacute;cembre 2022 :</strong></span></p>
-        <p>L'outil &agrave; &eacute;t&eacute; mis &agrave; jour pour corriger des soucis d'exports que conaissaient certains utilisateurs.</p>
-        <p>Bonnes f&ecirc;tes 🎄</p>
+        <p><br /><br /><span style="color: #27ae60;"><strong>Mise &agrave; jour du 13 juin 2025 :</strong></span></p>
+        <p>Mise à jour pour la compatibilité avec la nouvelle version de SensCritique.</p>
+        <p>Bon été et prenez soin de vous 🌞</p>
         <h2><br />😶 Pourquoi</h2>
         <p>Il y a de plus en plus d'int&eacute;r&ecirc;t &agrave; avoir un profil complet SensCritique et Letterboxd : les deux plateformes deviennent de plus en plus compl&eacute;mentaires et gagnent chaqu&rsquo;une en force tous les jours.</p>
         <p>Ce projet vient simplement de l'envie d'avoir un profil Letterboxd complet &agrave; partir de mes donn&eacute;es SensCritique.</p>
@@ -101,6 +187,32 @@
         </li>
         </ul>
         <br /><a href="https://github.com/phileastv/SensCritique2Letterboxd">Voir ce projet sur Github.</a> <br />Ceci un projet personnel non affili&eacute; &agrave; SensCritique, SensCritique.com ou SENSCRITIQUE SARL, et n'utilise aucune de leurs technologies ou code priv&eacute;.</div>
+
+    <script>
+        // Simple script to load changelog data
+        fetch('./data/changelog.json')
+            .then(response => response.json())
+            .then(data => {
+                const changelogContent = document.getElementById('changelog-content');
+                changelogContent.innerHTML = '';
+                
+                data.changelog.forEach(item => {
+                    const changelogItem = document.createElement('div');
+                    changelogItem.className = 'changelog-item';
+                    changelogItem.innerHTML = `
+                        <div class="changelog-date">${item.date}</div>
+                        <div class="changelog-version">${item.version}</div>
+                        <div class="changelog-description">${item.description}</div>
+                        <div class="changelog-details">${item.details}</div>
+                    `;
+                    changelogContent.appendChild(changelogItem);
+                });
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement du changelog:', error);
+                document.getElementById('changelog-content').innerHTML = '<p>Erreur lors du chargement des mises à jour.</p>';
+            });
+    </script>
 
 </body>
 
