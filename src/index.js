@@ -16,21 +16,39 @@ const loader = document.querySelector('#loader');
 const exportButton = document.querySelector("#export");
 const snackbar = document.querySelector("#snackbar");
 
-// Configure CORS proxy for external requests
-$.ajaxPrefilter(function(options, originalOptions, jqXHR) {
-    if (options.url.match(/^https?:/)) {
-        if (!options.headers) {
-            options.headers = {};
-        }
-        options.headers['X-Proxy-URL'] = options.url;
-        options.url = '/src/proxy.php';
-    }
-});
+// Direct proxy requests - no AJAX prefilter needed
+
+/**
+ * Test proxy connectivity
+ */
+function testProxyConnectivity() {
+    return $.ajax({
+        url: '/src/proxy.php',
+        type: 'GET',
+        timeout: 5000
+    }).done(function(data) {
+        console.log('✅ Proxy connectivity test passed');
+    }).fail(function() {
+        console.error('❌ Proxy connectivity test failed');
+        showSnackbar('Erreur: Impossible de contacter le serveur proxy');
+    });
+}
 
 /**
  * Initialize the application when DOM is ready
  */
 $(document).ready(function() {
+    // Check if GraphQL queries are loaded
+    if (!GRAPHQL_QUERIES || !GRAPHQL_QUERIES.USER_COLLECTION) {
+        console.error('❌ GraphQL queries not loaded!');
+        showSnackbar('Erreur: Les requêtes GraphQL ne sont pas chargées');
+        return;
+    }
+    console.log('✅ GraphQL queries loaded successfully');
+    
+    // Test proxy connectivity on startup
+    testProxyConnectivity();
+    
     $('#form').submit(function(e) {
         e.preventDefault();
         handleFormSubmission();
@@ -93,30 +111,20 @@ function updateUIForDataLoading(username) {
 async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false) {
     const queryData = defineQueryData(stateManager.get('username'), numberToLoad);
     
-    console.log('=== AJAX REQUEST DEBUG ===');
-    console.log('Query data being sent:', queryData);
-    console.log('Target URL:', CONFIG.API.URL);
-    console.log('Headers:', CONFIG.HEADERS);
-    console.log('Data size:', JSON.stringify(queryData).length, 'characters');
-    console.log('=============================');
-    
     try {
         const data = await $.ajax({
-            url: CONFIG.API.URL,
+            url: '/src/proxy.php',
             type: "POST",
             data: JSON.stringify(queryData),
             dataType: "json",
             contentType: CONFIG.HEADERS.CONTENT_TYPE,
             headers: {
+                'X-Proxy-URL': CONFIG.API.URL,
                 'authorization': CONFIG.API.AUTHORIZATION,
-                'User-Agent': CONFIG.HEADERS.USER_AGENT,
-                'Accept': CONFIG.HEADERS.ACCEPT,
-                'Referer': CONFIG.HEADERS.REFERER,
-                'Origin': CONFIG.HEADERS.ORIGIN
+                'Accept': CONFIG.HEADERS.ACCEPT
             }
         });
         
-        console.log('✅ Response received:', data);
         await handleApiResponse(data, numberToLoad, loadAllCollection);
         
     } catch (error) {
@@ -136,7 +144,12 @@ async function handleApiResponse(data, numberToLoad, loadAllCollection) {
     
     // Update user avatar if not already shown
     if ($('#useravatar > *').length == 0) {
-        const avatarImg = `<img id='profileavatar' height='50' width='50' alt='profileavatar' src='${data.data.user.medias.avatar}'></img>`;
+        let avatarUrl = data.data.user.medias.avatar;
+        // Use proxy for avatar images from media.senscritique.com to avoid CORS issues
+        if (avatarUrl && avatarUrl.includes('media.senscritique.com')) {
+            avatarUrl = `/src/proxy.php?csurl=${encodeURIComponent(avatarUrl)}`;
+        }
+        const avatarImg = `<img id='profileavatar' height='50' width='50' alt='profileavatar' src='${avatarUrl}'></img>`;
         $(avatarImg).appendTo("#useravatar");
     }
     
@@ -184,14 +197,39 @@ async function handleApiResponse(data, numberToLoad, loadAllCollection) {
  */
 function handleApiError(error) {
     console.error('❌ AJAX Error:', error);
-    console.log('Error details:', {
-        readyState: error.readyState,
-        status: error.status,
-        statusText: error.statusText,
-        responseText: error.responseText
-    });
     
-    showSnackbar(CONFIG.MESSAGES.FR.AJAX_ERROR);
+    let errorMessage = CONFIG.MESSAGES.FR.AJAX_ERROR;
+    
+    // Try to parse error response if it's JSON
+    if (error.responseText) {
+        try {
+            const errorData = JSON.parse(error.responseText);
+            
+            // Handle GraphQL errors specifically
+            if (errorData.errors && Array.isArray(errorData.errors)) {
+                const graphqlError = errorData.errors[0];
+                if (graphqlError.message) {
+                    errorMessage = `GraphQL Error: ${graphqlError.message}`;
+                    if (graphqlError.extensions && graphqlError.extensions.code) {
+                        errorMessage += ` (${graphqlError.extensions.code})`;
+                    }
+                }
+            }
+            // Handle proxy errors
+            else if (errorData.error) {
+                errorMessage = `Proxy Error: ${errorData.message || errorData.error}`;
+            }
+        } catch (e) {
+            // Not JSON, use default error message
+        }
+    }
+    
+    // Handle network errors (readyState 0, status 0)
+    if (error.readyState === 0 && error.status === 0) {
+        errorMessage = 'Erreur de réseau: Impossible de contacter le serveur proxy';
+    }
+    
+    showSnackbar(errorMessage);
     hideLoader();
 }
 
@@ -384,7 +422,14 @@ function autoScroll() {
  */
 function drawNewMovie(scUrl, imgUrl, name, year, rating, date, isWishlist) {
     const img = document.createElement("img");
-    img.src = imgUrl;
+    
+    // Use proxy for images from media.senscritique.com to avoid CORS issues
+    if (imgUrl && imgUrl.includes('media.senscritique.com')) {
+        img.src = `/src/proxy.php?csurl=${encodeURIComponent(imgUrl)}`;
+    } else {
+        img.src = imgUrl;
+    }
+    
     img.className = "poster";
     img.title = `${name} (${year}) - Noté ${rating} le ${date.toString()}`;
     img.href = scUrl;
