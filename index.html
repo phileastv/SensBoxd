@@ -6,11 +6,11 @@
     <title>SensBoxd</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <!-- Configuration and modules -->
-    <script defer src="src/config.js?v=5" charset="utf-8"></script>
-    <script defer src="src/graphql-queries.js?v=5" charset="utf-8"></script>
-    <script defer src="src/state-manager.js?v=5" charset="utf-8"></script>
+    <script defer src="src/config.js?v=16" charset="utf-8"></script>
+    <script defer src="src/graphql-queries.js?v=16" charset="utf-8"></script>
+    <script defer src="src/state-manager.js?v=16" charset="utf-8"></script>
     <!-- Main application -->
-    <script defer src="src/index.js?v=5" charset="utf-8"></script>
+    <script defer src="src/index.js?v=16" charset="utf-8"></script>
     <link rel="stylesheet" href="css/style.css">
 	<meta name="description" content="L'outil de migration simple pour passer de SensCritique à Letterboxd.">
     <meta property="og:title" content="Add title here">
@@ -58,7 +58,25 @@
             <div id="loader" style="display: none">Je mouline je mouline...</div>
         </div>
         <div id="header-right" class="header-right">
-            <button id="export" style="opacity: 0" onclick="exportDiary()">Exporter !</button>
+            <div id="export-dropdown" style="opacity: 0">
+                <button id="export-main-btn" class="export-btn">Exporter !</button>
+                <div id="export-menu" class="export-menu">
+                    <button onclick="exportForLetterboxd()" class="export-option">
+                        <span class="export-icon">📽️</span>
+                        <div class="export-text">
+                            <strong>Exporter pour Letterboxd</strong>
+                            <small>Films uniquement (Journal + Wishlist)</small>
+                        </div>
+                    </button>
+                    <button onclick="exportAll()" class="export-option">
+                        <span class="export-icon">📚</span>
+                        <div class="export-text">
+                            <strong>Exporter tout</strong>
+                            <small>Films, Séries, Livres, Albums...</small>
+                        </div>
+                    </button>
+                </div>
+            </div>
         </div>
 
 
@@ -66,9 +84,35 @@
 
     <div id="snackbar"></div>
     <div id="export-info-box"></div>
+    
+    <!-- Success Popup Modal -->
+    <div id="success-popup-overlay" class="popup-overlay">
+        <div id="success-popup" class="success-popup">
+            <div class="popup-content">
+                <!-- Content will be dynamically generated -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Progress Indicator -->
+    <div id="floating-loader">
+        <span class="count-text">0</span>
+        <span class="loading-icon">⚙️</span>
+        <div class="auto-scroll-control">
+            <input type="checkbox" id="auto-scroll-checkbox" checked>
+            <label for="auto-scroll-checkbox">Auto-scroll</label>
+        </div>
+    </div>
     </div>
 
     <div id="main-content">
+        <!-- Universe Tabs -->
+        <div id="universe-tabs" style="display: none;">
+            <div class="tabs-container">
+                <!-- Tabs will be dynamically generated here -->
+            </div>
+        </div>
+        
         <div class="left"></div>
         <div id="posterlist">
         </div>
@@ -77,12 +121,23 @@
 
     <!-- Bento Layout Section -->
     <div class="bento-container">
+        <div class="bento-box main-explainer">
+            <h1>👉 Migrer de SensCritique à Letterboxd 👈</h1>
+            <img style="width: 15vh;" src="./img/welcome-gif.gif" />
+            <p><br />Plop ! Voici un outil pour exporter ta collection SensCritique dans le format .CSV adapt&eacute; pour Letterboxd !</p>
+            <p><br /><strong>✨ Entre ton username SensCritique en haut, et z&eacute;&eacute;&eacute;&eacute; parti ! ✨<br /></strong></p>
+            <p><strong>Exemple</strong> : pour <a href="https://www.senscritique.com/phileas_imt">https://www.senscritique.com/phileas_imt</a>, rentrer "phileas_imt" sans les /</p>
+            <p><br />Une fois que tu as tous les films qu'il te faut, clique sur le bouton "Exporter" en haut &agrave; droite.</p>
+        </div>
         <!-- Pourquoi ce projet - Large box spanning 2 columns -->
         <div class="bento-box pourquoi-box">
             <h2>😶 Pourquoi ce projet</h2>
             <p>Il y a de plus en plus d'intérêt à avoir un profil complet SensCritique et Letterboxd : les deux plateformes deviennent de plus en plus complémentaires et gagnent chacune en force tous les jours.</p>
             <p>Ce projet vient simplement de l'envie d'avoir un profil Letterboxd complet à partir de mes données SensCritique.</p>
             <p>Vous pouvez utiliser cet outil toutes les semaines/mois pour remplir toutes vos données manquantes sur Letterboxd !</p>
+            <p>Ou alors simplement pour vos archives personnelles, l'outil exporte maintenant tous les univers : Films, Séries, Livres, Albums, BDs, Morceaux...</p>
+            <p>Cet outil est gratuit et open-source dans le but d'éviter le <a href="https://fr.wikipedia.org/wiki/Enfermement_propri%C3%A9taire">vendor-lock-in</a> que je trouve personnellement particulièrement injuste lorsqu'il s'agit de nos propres données. Il est bien évidement possible de demander ses données directement auprès des plateformes, mais c'est juste tellement plus pratique de pouvoir faire cela soi-même avec des formats universels et lisibles. 🌍</p>
+            <p>Letterboxd propose déjà l'exportation/importation par soi-même de ses données, ce qui n'est pas le cas de SensCritique. C'est pourquoi il est plus simple de passer de SensCritique à Letterboxd plutôt que l'inverse.</p>
         </div>
 
         <!-- Comment ça marche -->

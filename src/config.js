@@ -16,7 +16,20 @@ const CONFIG = {
         SCROLL_DISTANCE: 3000,
         SCROLL_DELAY: 1000,
         ANIMATION_DELAY: 1000,
-        SNACKBAR_DURATION: 3000
+        SNACKBAR_DURATION: 3000,
+        SCROLL_THRESHOLD: 200, // Distance from top to disable auto-scroll
+        FLOATING_LOADER_DELAY: 500 // Delay before showing floating loader
+    },
+    
+    // Universe Configuration
+    UNIVERSES: {
+        1: { label: "Films", csvColumns: ["Title", "Year", "Directors", "Rating10", "WatchedDate"] },
+        2: { label: "Livres", csvColumns: ["Title", "Year", "Authors", "Rating10", "WatchedDate"] },
+        3: { label: "Jeux vidéo", csvColumns: ["Title", "Year", "Developers", "Rating10", "WatchedDate"] },
+        4: { label: "Séries", csvColumns: ["Title", "Year", "Creators", "Rating10", "WatchedDate"] },
+        6: { label: "BDs", csvColumns: ["Title", "Year", "Authors", "Rating10", "WatchedDate"] },
+        7: { label: "Albums", csvColumns: ["Title", "Year", "Artists", "Rating10", "WatchedDate"] },
+        8: { label: "Morceaux", csvColumns: ["Title", "Year", "Artists", "Rating10", "WatchedDate"] }
     },
     
     // CSV Configuration

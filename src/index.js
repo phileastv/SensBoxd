@@ -11,10 +11,21 @@ let movieWatchlist = [];
 moviesDiary.push(CONFIG.CSV.DIARY_COLUMNS);
 movieWatchlist.push(CONFIG.CSV.WISHLIST_COLUMNS);
 
+// Universe collections for CSV export
+let universeCollections = {
+    diary: {}, // Will store diary data by universe
+    wishlist: {} // Will store wishlist data by universe
+};
+
 // DOM elements
 const loader = document.querySelector('#loader');
-const exportButton = document.querySelector("#export");
+const exportDropdown = document.querySelector("#export-dropdown");
 const snackbar = document.querySelector("#snackbar");
+const floatingLoader = document.querySelector("#floating-loader");
+
+// Scroll tracking variables
+let lastScrollTop = 0;
+let scrollTimeout = null;
 
 // Direct proxy requests - no AJAX prefilter needed
 
@@ -49,11 +60,134 @@ $(document).ready(function() {
     // Test proxy connectivity on startup
     testProxyConnectivity();
     
+    // Initialize state listeners
+    initializeStateListeners();
+    
+    // Initialize scroll detection
+    initializeScrollDetection();
+    
     $('#form').submit(function(e) {
         e.preventDefault();
         handleFormSubmission();
     });
 });
+
+/**
+ * Initialize state change listeners
+ */
+function initializeStateListeners() {
+    // Listen for universe updates to show/hide tabs
+    stateManager.addListener('universes_updated', function(universes) {
+        updateUniverseTabs(universes);
+    });
+    
+    // Listen for active universe changes to update display
+    stateManager.addListener('active_universe_changed', function(newUniverse, oldUniverse) {
+        updateActiveUniverseDisplay(newUniverse);
+        updateTabActiveState(newUniverse);
+    });
+    
+    // Listen for auto-scroll state changes
+    stateManager.addListener('auto_scroll_changed', function(enabled) {
+        updateFloatingLoader();
+    });
+    
+    // Listen for loading state changes
+    stateManager.addListener('isLoading', function(isLoading) {
+        updateFloatingLoader();
+    });
+    
+    // Listen for products added to animate count
+    stateManager.addListener('products_added', function(products) {
+        updateFloatingLoader();
+        animateCountUpdate();
+    });
+    
+    // Listen for username changes to show/hide floating loader
+    stateManager.addListener('username', function(username) {
+        updateFloatingLoader();
+    });
+}
+
+/**
+ * Initialize scroll detection to manage auto-scroll behavior
+ */
+function initializeScrollDetection() {
+    console.log('🎯 Initializing scroll detection');
+    
+    window.addEventListener('scroll', function() {
+        const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Clear existing timeout
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+        }
+        
+        // Debounce scroll detection
+        scrollTimeout = setTimeout(function() {
+            handleScrollDetection(currentScrollTop);
+        }, 100);
+    });
+    
+    // Add click handler for floating loader (but not for checkbox)
+    floatingLoader.addEventListener('click', function(e) {
+        // Don't toggle if clicking on checkbox or label
+        if (e.target.type === 'checkbox' || e.target.tagName === 'LABEL') {
+            return;
+        }
+        console.log('🎯 Floating loader clicked');
+        toggleAutoScroll();
+    });
+    
+    // Add specific handler for checkbox
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'auto-scroll-checkbox') {
+            console.log('🎯 Auto-scroll checkbox changed:', e.target.checked);
+            const currentState = stateManager.isAutoScrollEnabled();
+            if (e.target.checked !== currentState) {
+                toggleAutoScroll();
+            }
+        }
+    });
+    
+    // Add click-outside-to-close for popup
+    document.addEventListener('click', function(e) {
+        const popupOverlay = document.getElementById('success-popup-overlay');
+        const popup = document.getElementById('success-popup');
+        
+        if (e.target === popupOverlay && !popup.contains(e.target)) {
+            closeSuccessPopup();
+        }
+    });
+}
+
+/**
+ * Handle scroll detection logic
+ */
+function handleScrollDetection(currentScrollTop) {
+    const scrollThreshold = CONFIG.UI.SCROLL_THRESHOLD;
+    
+    // Check if user scrolled up significantly
+    if (currentScrollTop < scrollThreshold && stateManager.isAutoScrollEnabled()) {
+        // User scrolled to top, disable auto-scroll
+        console.log('🔄 Auto-scroll disabled - user scrolled to top');
+        stateManager.setAutoScrollEnabled(false);
+        stateManager.setUserScrolledUp(true);
+        // Immediately update floating loader visibility
+        updateFloatingLoader();
+    } else if (currentScrollTop >= scrollThreshold && !stateManager.isAutoScrollEnabled()) {
+        // User scrolled down past threshold, could re-enable auto-scroll
+        // But only if they haven't manually disabled it
+        if (stateManager.hasUserScrolledUp()) {
+            console.log('🔄 User scrolled down past threshold');
+            stateManager.setUserScrolledUp(false);
+            // Update floating loader visibility
+            updateFloatingLoader();
+        }
+    }
+    
+    lastScrollTop = currentScrollTop;
+}
 
 /**
  * Handle form submission and initialize data loading
@@ -72,12 +206,20 @@ function handleFormSubmission() {
         currentPage: 0,
         products: [],
         total: 0,
-        isLoading: true
+        isLoading: true,
+        autoScrollEnabled: true,
+        userScrolledUp: false
     });
     
     // Clear previous data
     moviesDiary = [CONFIG.CSV.DIARY_COLUMNS];
     movieWatchlist = [CONFIG.CSV.WISHLIST_COLUMNS];
+    
+    // Clear universe collections
+    universeCollections = {
+        diary: {},
+        wishlist: {}
+    };
     
     // Update UI
     updateUIForDataLoading(username);
@@ -91,10 +233,10 @@ function handleFormSubmission() {
  * Update UI elements when starting data loading
  */
 function updateUIForDataLoading(username) {
-    document.querySelector('#welcome-explainer').innerHTML = "";
-    document.getElementById("posterlist").innerHTML = "";
-    document.getElementById("submit").style.display = 'none';
-    document.querySelector('#usernameinputgroup').innerHTML = "";
+        document.querySelector('#welcome-explainer').innerHTML = "";
+        document.getElementById("posterlist").innerHTML = "";
+        document.getElementById("submit").style.display = 'none';
+        document.querySelector('#usernameinputgroup').innerHTML = "";
     document.querySelector('#numberinputgroup').innerHTML = 
         `<div id='useravatar'></div><h3 style='margin-top: 0px; margin-bottom: 0px;'>Le SensCritique de ${username}</h3>`;
     
@@ -138,7 +280,7 @@ async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false)
 async function handleApiResponse(data, numberToLoad, loadAllCollection) {
     if (data.data.user == null) {
         showSnackbar(CONFIG.MESSAGES.FR.PROFILE_ERROR);
-        hideLoader();
+                hideLoader();
         return;
     }
     
@@ -158,32 +300,22 @@ async function handleApiResponse(data, numberToLoad, loadAllCollection) {
         stateManager.set('total', data.data.user.collection.total);
     }
     
-    // Process movies
-    const movies = data.data.user.collection.products;
-    let movieCount = 0;
-    let otherUniverseCount = 0;
+    // Process all products (not just movies)
+    const products = data.data.user.collection.products;
     
-    movies.forEach(element => {
-        if (element.universe === CONFIG.CONSTANTS.MOVIE_UNIVERSE_ID) {
-            extractDataFromElement(element);
-            movieCount++;
-        } else {
-            otherUniverseCount++;
-        }
+    // Extract data for all products regardless of universe
+    products.forEach(element => {
+                        extractDataFromElement(element);
     });
     
-    if (otherUniverseCount > 0) {
-        showSnackbar(CONFIG.MESSAGES.FR.OTHER_UNIVERSE_WARNING);
-    }
-    
-    // Update state
-    stateManager.addProducts(movies.filter(m => m.universe === CONFIG.CONSTANTS.MOVIE_UNIVERSE_ID));
+    // Update state with all products
+    stateManager.addProducts(products);
     stateManager.incrementPage();
     
     // UI updates
-    autoScroll();
-    hideLoader();
-    showExportButton();
+                autoScroll();
+                hideLoader();
+                showExportButton();
     
     // Continue loading if needed
     if (loadAllCollection && stateManager.hasMoreProducts()) {
@@ -258,23 +390,28 @@ function defineQueryData(username, numberToLoad) {
 }
 
 /**
- * Extract and process movie data from API response element
+ * Extract and process data from API response element for any universe
  */
 function extractDataFromElement(element) {
     const title = extractTitle(element);
     if (!title) return;
     
     const year = extractYear(element);
-    const directors = extractDirectors(element);
+    const creators = extractCreators(element);
     const rating = element.otherUserInfos.rating;
     const watchedDate = extractWatchedDate(element);
     const isWishlist = element.otherUserInfos.isWished;
     const isDone = element.otherUserInfos.isDone;
     const url = CONFIG.API.BASE_URL + element.url;
     const imgUrl = element.medias.picture;
+    const universe = element.universe;
     
-    addMovieToCollections(title, year, directors, rating, watchedDate, isWishlist, isDone);
-    drawNewMovie(url, imgUrl, title, year, rating, watchedDate, isWishlist);
+    addToUniverseCollections(universe, title, year, creators, rating, watchedDate, isWishlist, isDone);
+    
+    // Only draw items for the currently active universe
+    if (universe === stateManager.get('activeUniverse')) {
+        drawNewItem(url, imgUrl, title, year, rating, watchedDate, isWishlist);
+    }
 }
 
 /**
@@ -304,11 +441,30 @@ function extractYear(element) {
 }
 
 /**
- * Extract directors from element with error handling
+ * Extract creators from element based on universe type
  */
-function extractDirectors(element) {
+function extractCreators(element) {
     try {
-        return '"' + element.directors[0].name + '"';
+        const universe = element.universe;
+        
+        // Different universes have different creator fields
+        switch (universe) {
+            case 1: // Films
+                return element.directors?.map(d => d.name).join(', ') || '';
+            case 2: // Livres
+                return element.authors?.map(a => a.name).join(', ') || '';
+            case 3: // Jeux vidéo
+                return element.developers?.map(d => d.name).join(', ') || '';
+            case 4: // Séries
+                return element.creators?.map(c => c.name).join(', ') || element.directors?.map(d => d.name).join(', ') || '';
+            case 6: // BDs
+                return element.authors?.map(a => a.name).join(', ') || element.pencillers?.map(p => p.name).join(', ') || '';
+            case 7: // Albums
+            case 8: // Morceaux
+                return element.artists?.map(a => a.name).join(', ') || '';
+            default:
+                return '';
+        }
     } catch (e) {
         return "";
     }
@@ -333,59 +489,192 @@ function convertDateToYear(dateString) {
 }
 
 /**
- * Add movie to appropriate collections (diary/wishlist)
+ * Add item to appropriate universe collections (diary/wishlist)
  */
-function addMovieToCollections(title, year, directors, rating, watchedDate, isWishlist, isDone) {
+function addToUniverseCollections(universe, title, year, creators, rating, watchedDate, isWishlist, isDone) {
+    // Initialize universe collections if they don't exist
+    if (!universeCollections.diary[universe]) {
+        const universeConfig = CONFIG.UNIVERSES[universe];
+        if (universeConfig) {
+            universeCollections.diary[universe] = [universeConfig.csvColumns];
+            universeCollections.wishlist[universe] = [universeConfig.csvColumns.slice(0, 3)]; // Title, Year, Creators
+        }
+    }
+    
     // Clean special characters for CSV compatibility
     const titleCleaned = title.replace(CONFIG.CSV.REGEX_CHAR_TO_REMOVE, '');
-    const directorsCleaned = directors.replace(CONFIG.CSV.REGEX_CHAR_TO_REMOVE, '');
+    const creatorsCleaned = creators.replace(CONFIG.CSV.REGEX_CHAR_TO_REMOVE, '');
     const yearInt = parseInt(year);
     const ratingInt = parseInt(rating);
     
-    if (isDone === true) {
-        console.log("✅ Ajouté au journal     ➡️ " + title);
-        moviesDiary.push([titleCleaned, yearInt, directorsCleaned, ratingInt, watchedDate]);
+    const universeLabel = CONFIG.UNIVERSES[universe]?.label || 'Unknown';
+    
+    if (isDone === true && universeCollections.diary[universe]) {
+        console.log(`✅ Ajouté au journal ${universeLabel} ➡️ ${title}`);
+        universeCollections.diary[universe].push([titleCleaned, yearInt, creatorsCleaned, ratingInt, watchedDate]);
     }
     
-    if (isWishlist === true) {
-        movieWatchlist.push([titleCleaned, yearInt, directorsCleaned]);
-        console.log("📝 Ajouté à la Watchlist ➡️ " + title);
+    if (isWishlist === true && universeCollections.wishlist[universe]) {
+        universeCollections.wishlist[universe].push([titleCleaned, yearInt, creatorsCleaned]);
+        console.log(`📝 Ajouté à la Wishlist ${universeLabel} ➡️ ${title}`);
+    }
+    
+    // Also add to legacy collections for backward compatibility (movies only)
+    if (universe === 1) {
+        if (isDone === true) {
+            moviesDiary.push([titleCleaned, yearInt, creatorsCleaned, ratingInt, watchedDate]);
+        }
+        if (isWishlist === true) {
+            movieWatchlist.push([titleCleaned, yearInt, creatorsCleaned]);
+        }
     }
 }
 
 /**
- * Export diary to CSV file
+ * Export diary to CSV file (legacy function - now redirects to exportAll)
  */
 function exportDiary() {
-    const exportBox = document.querySelector('#export-info-box');
-    exportBox.className = CONFIG.CONSTANTS.EXPORT_INFO_BOX_SHOW_CLASS;
-    exportBox.innerHTML = `
-        <h2>Au top !</h2>
-        <video width='320' height='240' controls autoplay>
-            <source src='./video/fantasticmrfox_whistle.mp4' type='video/mp4'>
-            Your browser does not support the video tag.
-        </video>
-        <p>Tu viens de télécharger le fichier .CSV contenant tous les films marqués en vert sur ton écran.</p>
-        <p>Pour importer tes films sur Letterboxd, il te suffit maintenant d'<a target='_blank' rel='noopener noreferrer' href='https://letterboxd.com/import/'><strong>aller sur la page d'importation</strong></a> et de sélectionner le .CSV téléchargé !</p>
-        <p>Il est également posible d'importer ta liste d'envies sur Letterboxd (films marqués en bleu sur ton écran). Il faut à ce moment aller sur https://letterboxd.com/TONPROFIL/watchlist/, et importer le CSV dispo ci-dessous.</p>
-        <button onclick='exportWishlist()'>Exporter ma liste d'envies.</button>
-        <button onclick='hideExportInfoBox()'>Fermer</button>
-    `;
-    
-    const today = new Date();
-    const date = `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
-    const filename = `${date} Export de la Collection SensCritique de ${stateManager.get('username')}.csv`;
-    exportToCsv(filename, moviesDiary);
+    exportAll();
 }
 
 /**
- * Export wishlist to CSV file
+ * Export wishlist to CSV file (legacy function for movies)
  */
 function exportWishlist() {
     const today = new Date();
     const date = `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
-    const filename = `${date} Export de la Watchlist SensCritique de ${stateManager.get('username')}.csv`;
+    const filename = `${date} Export SensCritique de ${stateManager.get('username')} - Films dans la watchlist.csv`;
     exportToCsv(filename, movieWatchlist);
+}
+
+/**
+ * Export diary for a specific universe
+ */
+function exportUniverseDiary(universeId) {
+    const universeConfig = CONFIG.UNIVERSES[universeId];
+    if (!universeConfig || !universeCollections.diary[universeId]) {
+        showSnackbar('Aucune donnée à exporter pour cet univers');
+        return;
+    }
+    
+    const today = new Date();
+    const date = `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
+    const filename = `${date} Export SensCritique de ${stateManager.get('username')} - ${universeConfig.label} vu(e)s.csv`;
+    exportToCsv(filename, universeCollections.diary[universeId]);
+}
+
+/**
+ * Export wishlist for a specific universe
+ */
+function exportUniverseWishlist(universeId) {
+    const universeConfig = CONFIG.UNIVERSES[universeId];
+    if (!universeConfig || !universeCollections.wishlist[universeId]) {
+        showSnackbar('Aucune donnée à exporter pour cet univers');
+        return;
+    }
+    
+    const today = new Date();
+    const date = `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
+    const filename = `${date} Export SensCritique de ${stateManager.get('username')} - ${universeConfig.label} dans la watchlist.csv`;
+    exportToCsv(filename, universeCollections.wishlist[universeId]);
+}
+
+/**
+ * Export for Letterboxd (Films only - Diary + Wishlist)
+ */
+function exportForLetterboxd() {
+    const filmUniverseId = 1; // Films universe
+    const today = new Date();
+    const date = `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
+    const username = stateManager.get('username');
+    
+    let downloadsStarted = 0;
+    let totalItems = 0;
+    
+    // Export Films Diary
+    if (universeCollections.diary[filmUniverseId] && universeCollections.diary[filmUniverseId].length > 1) {
+        const diaryFilename = `${date} Export SensCritique de ${username} - Films vus.csv`;
+        exportToCsv(diaryFilename, universeCollections.diary[filmUniverseId]);
+        downloadsStarted++;
+        totalItems += universeCollections.diary[filmUniverseId].length - 1; // -1 for header row
+    }
+    
+    // Export Films Wishlist
+    if (universeCollections.wishlist[filmUniverseId] && universeCollections.wishlist[filmUniverseId].length > 1) {
+        const wishlistFilename = `${date} Export SensCritique de ${username} - Films dans la watchlist.csv`;
+        setTimeout(() => {
+            exportToCsv(wishlistFilename, universeCollections.wishlist[filmUniverseId]);
+        }, 100); // Small delay to avoid browser blocking multiple downloads
+        downloadsStarted++;
+        totalItems += universeCollections.wishlist[filmUniverseId].length - 1; // -1 for header row
+    }
+    
+    if (downloadsStarted > 0) {
+        // Show success popup after a short delay to ensure downloads have started
+        setTimeout(() => {
+            showLetterboxdSuccessPopup(totalItems, downloadsStarted);
+        }, 500);
+    } else {
+        showSnackbar('Aucun film trouvé à exporter pour Letterboxd');
+    }
+}
+
+/**
+ * Export all universes (Films, Series, Books, Albums, etc.)
+ */
+function exportAll() {
+    const availableUniverses = stateManager.getAvailableUniverses();
+    const today = new Date();
+    const date = `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
+    const username = stateManager.get('username');
+    
+    let downloadsStarted = 0;
+    let totalItems = 0;
+    let delay = 0;
+    const exportedFiles = [];
+    
+    availableUniverses.forEach(universe => {
+        // Export Diary for this universe
+        if (universeCollections.diary[universe.id] && universeCollections.diary[universe.id].length > 1) {
+            const diaryFilename = `${date} Export SensCritique de ${username} - ${universe.label} vu(e)s.csv`;
+            setTimeout(() => {
+                exportToCsv(diaryFilename, universeCollections.diary[universe.id]);
+            }, delay);
+            delay += 150; // Stagger downloads to avoid browser blocking
+            downloadsStarted++;
+            totalItems += universeCollections.diary[universe.id].length - 1; // -1 for header row
+            exportedFiles.push({
+                type: 'diary',
+                universe: universe.label,
+                count: universeCollections.diary[universe.id].length - 1
+            });
+        }
+        
+        // Export Wishlist for this universe
+        if (universeCollections.wishlist[universe.id] && universeCollections.wishlist[universe.id].length > 1) {
+            const wishlistFilename = `${date} Export SensCritique de ${username} - ${universe.label} dans la watchlist.csv`;
+            setTimeout(() => {
+                exportToCsv(wishlistFilename, universeCollections.wishlist[universe.id]);
+            }, delay);
+            delay += 150;
+            downloadsStarted++;
+            totalItems += universeCollections.wishlist[universe.id].length - 1; // -1 for header row
+            exportedFiles.push({
+                type: 'wishlist',
+                universe: universe.label,
+                count: universeCollections.wishlist[universe.id].length - 1
+            });
+        }
+    });
+    
+    if (downloadsStarted > 0) {
+        // Show success popup after all downloads have started
+        setTimeout(() => {
+            showExportAllSuccessPopup(totalItems, downloadsStarted, exportedFiles);
+        }, delay + 500);
+    } else {
+        showSnackbar('Aucune donnée trouvée à exporter');
+    }
 }
 
 /**
@@ -406,7 +695,7 @@ function exportToCsv(filename, rows) {
  * Auto-scroll functionality
  */
 function autoScroll() {
-    if (CONFIG.UI.AUTO_SCROLL) {
+    if (CONFIG.UI.AUTO_SCROLL && stateManager.isAutoScrollEnabled()) {
         setTimeout(function() {
             window.scrollBy({
                 top: CONFIG.UI.SCROLL_DISTANCE,
@@ -418,16 +707,16 @@ function autoScroll() {
 }
 
 /**
- * Draw new movie poster in the UI
+ * Draw new item poster in the UI
  */
-function drawNewMovie(scUrl, imgUrl, name, year, rating, date, isWishlist) {
+function drawNewItem(scUrl, imgUrl, name, year, rating, date, isWishlist) {
     const img = document.createElement("img");
     
     // Use proxy for images from media.senscritique.com to avoid CORS issues
     if (imgUrl && imgUrl.includes('media.senscritique.com')) {
         img.src = `/src/proxy.php?csurl=${encodeURIComponent(imgUrl)}`;
     } else {
-        img.src = imgUrl;
+    img.src = imgUrl;
     }
     
     img.className = "poster";
@@ -468,7 +757,7 @@ function hideLoader() {
 function showSnackbar(message) {
     snackbar.innerHTML = message;
     snackbar.className = "show";
-    
+
     setTimeout(function() {
         snackbar.className = snackbar.className.replace("show", "");
     }, CONFIG.UI.SNACKBAR_DURATION);
@@ -478,7 +767,10 @@ function showSnackbar(message) {
  * Show export button
  */
 function showExportButton() {
-    exportButton.style.opacity = 1;
+    const exportDropdown = document.getElementById('export-dropdown');
+    if (exportDropdown) {
+        exportDropdown.style.opacity = 1;
+    }
 }
 
 /**
@@ -486,4 +778,252 @@ function showExportButton() {
  */
 function hideExportInfoBox() {
     document.querySelector('#export-info-box').classList = "";
+}
+
+/**
+ * Update universe tabs display
+ */
+function updateUniverseTabs(universes) {
+    const tabsContainer = document.querySelector('#universe-tabs .tabs-container');
+    const universeTabs = document.querySelector('#universe-tabs');
+    
+    if (universes.length <= 1) {
+        universeTabs.style.display = 'none';
+        return;
+    }
+    
+    // Clear existing tabs
+    tabsContainer.innerHTML = '';
+    
+    // Create tabs for each universe
+    universes.forEach(universe => {
+        const tab = document.createElement('button');
+        tab.className = 'universe-tab';
+        tab.dataset.universe = universe.id;
+        tab.innerHTML = `${universe.label} <span class="count">(${universe.count})</span>`;
+        
+        // Set active state for current universe
+        if (universe.id === stateManager.get('activeUniverse')) {
+            tab.classList.add('active');
+        }
+        
+        // Add click handler
+        tab.addEventListener('click', () => {
+            switchToUniverse(universe.id);
+        });
+        
+        tabsContainer.appendChild(tab);
+    });
+    
+    universeTabs.style.display = 'block';
+}
+
+/**
+ * Switch to a different universe
+ */
+function switchToUniverse(universeId) {
+    stateManager.setActiveUniverse(universeId);
+}
+
+/**
+ * Update tab active state
+ */
+function updateTabActiveState(activeUniverse) {
+    const tabs = document.querySelectorAll('.universe-tab');
+    tabs.forEach(tab => {
+        if (parseInt(tab.dataset.universe) === activeUniverse) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * Update display for active universe
+ */
+function updateActiveUniverseDisplay(universeId) {
+    const posterContainer = document.getElementById("posterlist");
+    posterContainer.innerHTML = "";
+    
+    // Get products for the active universe
+    const products = stateManager.getUniverseProducts(universeId);
+    
+    // Draw all products for this universe
+    products.forEach(element => {
+        const title = extractTitle(element);
+        if (!title) return;
+        
+        const year = extractYear(element);
+        const rating = element.otherUserInfos.rating;
+        const watchedDate = extractWatchedDate(element);
+        const isWishlist = element.otherUserInfos.isWished;
+        const url = CONFIG.API.BASE_URL + element.url;
+        const imgUrl = element.medias.picture;
+        
+        drawNewItem(url, imgUrl, title, year, rating, watchedDate, isWishlist);
+    });
+}
+
+/**
+ * Update floating loader visibility and content
+ */
+function updateFloatingLoader() {
+    const floatingLoader = document.getElementById('floating-loader');
+    const countText = floatingLoader.querySelector('.count-text');
+    const loadingIcon = floatingLoader.querySelector('.loading-icon');
+    const autoScrollCheckbox = document.getElementById('auto-scroll-checkbox');
+    
+    const isLoading = stateManager.get('isLoading');
+    const autoScrollEnabled = stateManager.isAutoScrollEnabled();
+    const totalCount = stateManager.getTotalItemsCount();
+    const username = stateManager.get('username');
+    
+    // Show floating loader when we have a username (tool is started)
+    if (username) {
+        floatingLoader.style.display = 'block';
+        
+        // Update count
+        countText.textContent = totalCount;
+        
+        // Update checkbox state
+        if (autoScrollCheckbox) {
+            autoScrollCheckbox.checked = autoScrollEnabled;
+        }
+        
+        // Show/hide loading icon based on loading state
+        if (isLoading) {
+            loadingIcon.classList.remove('hidden');
+            floatingLoader.classList.add('loading');
+        } else {
+            loadingIcon.classList.add('hidden');
+            floatingLoader.classList.remove('loading');
+        }
+        
+        // Update background color based on auto-scroll state
+        if (autoScrollEnabled) {
+            floatingLoader.style.backgroundColor = 'var(--green)';
+        } else {
+            floatingLoader.style.backgroundColor = 'var(--orange)';
+        }
+    } else {
+        floatingLoader.style.display = 'none';
+    }
+}
+
+/**
+ * Animate count when new items are added
+ */
+function animateCountUpdate() {
+    const floatingLoader = document.getElementById('floating-loader');
+    floatingLoader.classList.add('animate-count');
+    
+    setTimeout(() => {
+        floatingLoader.classList.remove('animate-count');
+    }, 600);
+}
+
+/**
+ * Toggle auto-scroll state
+ */
+function toggleAutoScroll() {
+    const currentState = stateManager.isAutoScrollEnabled();
+    stateManager.setAutoScrollEnabled(!currentState);
+    
+    if (!currentState) {
+        // If enabling auto-scroll, scroll to bottom
+        stateManager.setUserScrolledUp(false);
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+    
+    updateFloatingLoader();
+}
+
+/**
+ * Show success popup for Letterboxd export
+ */
+function showLetterboxdSuccessPopup(totalItems, filesCount) {
+    const popupOverlay = document.getElementById('success-popup-overlay');
+    const popupContent = document.querySelector('.popup-content');
+    
+    popupContent.innerHTML = `
+        <h2>🎉 Bravo !</h2>
+        <div class="success-count">${totalItems}</div>
+        <div class="success-message">Tu as maintenant exporté <strong>${totalItems} œuvres</strong> de ton SensCritique !</div>
+        
+        <video width='350' height='260' controls autoplay>
+            <source src='./video/fantasticmrfox_whistle.mp4' type='video/mp4'>
+            Your browser does not support the video tag.
+        </video>
+        
+        <div class="instruction-text">
+            <strong>📽️ Pour importer tes films sur Letterboxd :</strong><br>
+            Clique sur le bouton ci-dessous pour accéder à la page d'importation de Letterboxd, puis sélectionne les fichiers CSV que tu viens de télécharger !
+        </div>
+        
+        <a href="https://letterboxd.com/import/" target="_blank" rel="noopener noreferrer" class="letterboxd-button">
+            🚀 Aller sur la page d'importation Letterboxd
+        </a>
+        
+        <br>
+        <button class="close-button" onclick="closeSuccessPopup()">Fermer</button>
+    `;
+    
+    popupOverlay.classList.add('show');
+}
+
+/**
+ * Show success popup for Export All
+ */
+function showExportAllSuccessPopup(totalItems, filesCount, exportedFiles) {
+    const popupOverlay = document.getElementById('success-popup-overlay');
+    const popupContent = document.querySelector('.popup-content');
+    
+    // Generate files list
+    let filesList = '<div class="files-list"><h3>📁 Fichiers téléchargés :</h3>';
+    exportedFiles.forEach(file => {
+        const typeLabel = file.type === 'diary' ? 'vus' : 'dans la watchlist';
+        filesList += `
+            <div class="file-item">
+                <span class="file-name">${file.universe} ${typeLabel}</span>
+                <span class="file-count">${file.count} éléments</span>
+            </div>
+        `;
+    });
+    filesList += '</div>';
+    
+    popupContent.innerHTML = `
+        <h2>🎉 Bravo !</h2>
+        <div class="success-count">${totalItems}</div>
+        <div class="success-message">Tu as maintenant exporté <strong>${totalItems} œuvres</strong> de ton SensCritique !</div>
+        
+        <video width='350' height='260' controls autoplay>
+            <source src='./video/fantasticmrfox_whistle.mp4' type='video/mp4'>
+            Your browser does not support the video tag.
+        </video>
+        
+        ${filesList}
+        
+        <div class="instruction-text">
+            <strong>📚 Tes collections sont maintenant exportées !</strong><br>
+            Tu as téléchargé ${filesCount} fichiers CSV contenant toutes tes données SensCritique. 
+            Pour les films, tu peux les <a href="https://letterboxd.com/import/" target="_blank" rel="noopener noreferrer">importer sur Letterboxd</a>. 
+            Les autres contenus peuvent être utilisés pour d'autres plateformes ou pour tes archives personnelles.
+        </div>
+        
+        <button class="close-button" onclick="closeSuccessPopup()">Fermer</button>
+    `;
+    
+    popupOverlay.classList.add('show');
+}
+
+/**
+ * Close success popup
+ */
+function closeSuccessPopup() {
+    const popupOverlay = document.getElementById('success-popup-overlay');
+    popupOverlay.classList.remove('show');
 }
