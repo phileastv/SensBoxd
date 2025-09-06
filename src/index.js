@@ -475,7 +475,28 @@ function extractCreators(element) {
  */
 function extractWatchedDate(element) {
     try {
-        return element.otherUserInfos.dateDone.substring(0, 10);
+        // SensCritique stores watched dates as UTC timestamps.
+        // Letterboxd uses local YYYY-MM-DD format.
+        // Convert to local time to avoid off-by-one-day errors.
+        const utcDate = new Date(element.otherUserInfos.dateDone);
+
+        const options = {
+            timeZone: 'Europe/Paris',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        };
+
+        const formatter = new Intl.DateTimeFormat('fr-FR', options);
+        const parts = formatter.formatToParts(utcDate);
+
+        const year = parts.find(p => p.type === 'year').value;
+        const month = parts.find(p => p.type === 'month').value;
+        const day = parts.find(p => p.type === 'day').value;
+
+        const localDate = `${year}-${month}-${day}`;
+
+        return localDate;
     } catch (e) {
         return "";
     }
