@@ -475,6 +475,10 @@ function extractCreators(element) {
  */
 function extractWatchedDate(element) {
     try {
+        if (!element.otherUserInfos.dateDone) {
+            return "";
+        }
+
         // SensCritique stores watched dates as UTC timestamps.
         // Letterboxd uses local YYYY-MM-DD format.
         // Convert to local time to avoid off-by-one-day errors.
