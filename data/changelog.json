@@ -1,6 +1,12 @@
 {
   "changelog": [
     {
+      "date": "2026-04-06",
+      "version": "v4.3",
+      "description": "☕ Joyeuse nouvelle année !",
+    "details": "Correction des dates de visionnages dans le CSV (Merci CarinaChenot pour la PR) et ajout de l'option pour m'offrir un café (miam, merci !)"
+    },
+    {
       "date": "2025-06-14",
       "version": "v4.2",
       "description": "💫 Pas que les films !",

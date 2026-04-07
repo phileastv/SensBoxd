@@ -992,7 +992,13 @@ function showLetterboxdSuccessPopup(totalItems, filesCount) {
         <a href="https://letterboxd.com/import/" target="_blank" rel="noopener noreferrer" class="letterboxd-button">
             🚀 Aller sur la page d'importation Letterboxd
         </a>
-        
+
+        <div class="instruction-text">
+            <strong>☕ Tu as aimé cet outil et gagné un temps monstrueux ?</strong><br>
+            Tu peux (si tu le souhaites) <strong><a href="https://buymeacoffee.com/phileas_imt" target="_blank" rel="noopener noreferrer">m'offrir un café (slurp, merci !) ☕</a></strong>
+            </br></br>Sache également que ce site est <a href="https://github.com/phileastv/SensBoxd" target="_blank" rel="noopener noreferrer">open-source</a>, tout le monde peut contribuer à son amélioration. Rends le monde meilleur et parles en autour de toi ! ☭
+        </div>
+
         <br>
         <button class="close-button" onclick="closeSuccessPopup()">Fermer</button>
     `;
