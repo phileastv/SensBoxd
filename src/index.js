@@ -275,12 +275,22 @@ async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false)
 }
 
 /**
- * Handle successful API response
+ * Handle successful API response and manage profile errors
  */
-async function handleApiResponse(data, numberToLoad, loadAllCollection) {
+async function handleApiResponse(data, numberToLoad, loadAllCollection = false) {
+    // CAS DU PROFIL INTROUVABLE OU PRIVÉ (data.data.user est null)
     if (data.data.user == null) {
-        showSnackbar(CONFIG.MESSAGES.FR.PROFILE_ERROR);
-                hideLoader();
+        // On crée un objet d'erreur simulé pour déclencher proprement le panneau d'aide help.html
+        const fakeProfileError = {
+            status: "Profil introuvable",
+            responseText: JSON.stringify({
+                error: "Utilisateur inconnu ou privé",
+                message: "Le pseudo fourni n'existe pas sur SensCritique ou son accès est restreint."
+            })
+        };
+        
+        // On délègue l'affichage au panneau d'erreur interactif
+        handleApiError(fakeProfileError);
         return;
     }
     
@@ -325,44 +335,73 @@ async function handleApiResponse(data, numberToLoad, loadAllCollection) {
 }
 
 /**
- * Handle API errors
- */
+* Handle API errors dynamically based on progress
+*/
 function handleApiError(error) {
-    console.error('❌ AJAX Error:', error);
-    
-    let errorMessage = CONFIG.MESSAGES.FR.AJAX_ERROR;
-    
-    // Try to parse error response if it's JSON
-    if (error.responseText) {
-        try {
-            const errorData = JSON.parse(error.responseText);
-            
-            // Handle GraphQL errors specifically
-            if (errorData.errors && Array.isArray(errorData.errors)) {
-                const graphqlError = errorData.errors[0];
-                if (graphqlError.message) {
-                    errorMessage = `GraphQL Error: ${graphqlError.message}`;
-                    if (graphqlError.extensions && graphqlError.extensions.code) {
-                        errorMessage += ` (${graphqlError.extensions.code})`;
-                    }
-                }
-            }
-            // Handle proxy errors
-            else if (errorData.error) {
-                errorMessage = `Proxy Error: ${errorData.message || errorData.error}`;
-            }
-        } catch (e) {
-            // Not JSON, use default error message
-        }
-    }
-    
-    // Handle network errors (readyState 0, status 0)
-    if (error.readyState === 0 && error.status === 0) {
-        errorMessage = 'Erreur de réseau: Impossible de contacter le serveur proxy';
-    }
-    
-    showSnackbar(errorMessage);
-    hideLoader();
+   console.error('❌ AJAX Error:', error);
+   hideLoader();
+
+   const username = stateManager.get('username') || "Inconnu";
+   const errorStatus = error.status || "Erreur réseau";
+   
+   let errorDetails = "Impossible de joindre l'API de SensCritique.";
+   if (error.responseText) {
+       try {
+           const parsed = JSON.parse(error.responseText);
+           errorDetails = parsed.message || parsed.error || error.responseText.substring(0, 100);
+       } catch(e) {
+           errorDetails = error.responseText.substring(0, 100);
+       }
+   }
+
+   const totalLoadedCount = stateManager.getTotalItemsCount();
+
+   // Si des données ont déjà été chargées : alerte discrète en Snackbar
+   if (totalLoadedCount > 0) {
+       showSnackbar(`⚠️ Une erreur est survenue lors de la récupération de la page suivante (${errorStatus}).`);
+       const submitBtn = document.getElementById("submit");
+       if (submitBtn) {
+           submitBtn.style.display = 'block';
+       }
+       return;
+   }
+
+   // Si aucune donnée n'a été récupérée (0 œuvres) : affichage du panneau d'aide complet
+   const queryParams = new URLSearchParams({
+       user: username,
+       status: errorStatus,
+       details: errorDetails
+   });
+
+   const helpPageUrl = `./help.html?${queryParams.toString()}`;
+   const posterList = document.getElementById("posterlist");
+
+   if (posterList) {
+       // CORRECTION DU CADRE BLANC : suppression stricte des styles CSS hérités
+       posterList.setAttribute("style", "background: transparent !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: none !important;");
+
+       // Intégration de l'iframe à l'échelle optimale
+       posterList.innerHTML = `
+           <iframe src="${helpPageUrl}" style="
+               width: 100%;
+               min-height: 900px; /* Hauteur augmentée pour contenir le texte de profil sans scroll */
+               border: none;
+               background: transparent;
+               display: block;
+               margin: 0 auto;
+               max-width: 650px;
+               overflow: hidden;
+           " scrolling="no"></iframe>
+       `;
+   }
+
+   // Ré-affichage du formulaire de recherche
+   const submitBtn = document.getElementById("submit");
+   if (submitBtn) {
+       submitBtn.style.display = 'block';
+   }
+
+   showSnackbar("Le chargement a échoué. Consultez le guide d'aide affiché ci-dessous.");
 }
 
 /**

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            background-color: #14181c; /* Aligné sur la couleur exacte de votre site */
+            color: #9ab;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .troubleshooting-card {
+            background: #1c252d;
+            padding: 25px;
+            border-radius: 0px; /* Suppression des angles arrondis pour éviter les démarcations de couleur */
+            border: 1px solid #2c3843;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        h1 { color: #fff; margin-top: 0; font-size: 20px; display: flex; align-items: center; gap: 8px; }
+        h2 { color: #f4b400; font-size: 15px; margin-top: 25px; }
+        ul { padding-left: 20px; line-height: 1.6; font-size: 14px; margin-bottom: 20px; }
+        li { margin-bottom: 12px; }
+        strong { color: #fff; }
+        .error-box {
+            background: #2c1a1a;
+            border: 1px solid #ff4b4b;
+            color: #ff9999;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            margin-bottom: 20px;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        .btn-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 25px; }
+        .btn {
+            padding: 12px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            border: none;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-github { background-color: #00c030; color: #fff; }
+        .btn-retry { background-color: #f4b400; color: #1c252d; }
+        
+        /* Habillage pour l'explication de l'URL */
+        .alert-info-box {
+            background: rgba(244, 180, 0, 0.08);
+            border-left: 4px solid #f4b400;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+        .url-visualizer {
+            background-color: #14181c;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            margin-top: 10px;
+            border: 1px solid #2c3843;
+            color: #8a9ba8;
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .url-highlight {
+            background-color: #f4b400;
+            color: #1c252d;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .test-link-wrapper {
+            margin-top: 12px;
+            display: block;
+            font-weight: bold;
+        }
+        .test-link-wrapper a {
+            color: #f4b400;
+            text-decoration: none;
+            border-bottom: 1px dashed #f4b400;
+        }
+        .test-link-wrapper a:hover {
+            color: #fff;
+            border-bottom-style: solid;
+        }
+    </style>
+</head>
+<body>
+    <div class="troubleshooting-card">
+        <h1>⚠️ Le chargement a échoué</h1>
+        <p style="font-size: 14px; margin-bottom: 15px;">Le système n'a pas pu récupérer les données de l'utilisateur SensCritique demandé.</p>
+        
+        <div class="error-box" id="error-details">
+            Détails de l'erreur...
+        </div>
+
+        <div class="alert-info-box">
+            👉 <strong>Ne t'es-tu pas trompé sur ton nom d'utilisateur ?</strong><br>
+            Il ne s'agit pas de ton nom d'affichage public (qui peut contenir des espaces ou des majuscules), mais de l'identifiant technique présent dans la barre d'adresse de ton navigateur lorsque tu es sur ton profil :
+            
+            <div class="url-visualizer">
+                https://www.senscritique.com/<span class="url-highlight" id="url-placeholder">nom_utilisateur</span>
+            </div>
+            
+            <span class="test-link-wrapper">
+                🔎 
+                <a id="profile-test-link" href="#" target="_blank" rel="noopener noreferrer">
+                    Teste ton profil en direct : Ouvrir mon profil <span id="current-username"></span>
+                </a>
+                <br>
+                <span style="font-size: 12px; color: #8a9ba8; font-weight: normal; display: block; margin-top: 4px;">
+                    (Si ce lien te redirige vers la page d'accueil de SensCritique, c'est que le pseudo saisi est incorrect.)
+                </span>
+            </span>
+        </div>
+
+        <h2>🛠️ Vérifications rapides :</h2>
+        <ul>
+            <li><strong>Votre profil est-il bien public ?</strong><br>Vérifiez dans vos paramètres SensCritique que votre compte n'est pas "Privé".</li>
+            <li><strong>La connexion internet est-elle bonne ?</strong><br>Une micro-coupure peut faire échouer la récupération des données volumineuses.</li>
+            <li><strong>Le site SensCritique fonctionne-t-il ?</strong><br>Assurez-vous que la plateforme n'est pas actuellement en cours de maintenance.</li>
+        </ul>
+
+        <h2>🛰️ Signaler un problème persistant :</h2>
+        <p style="font-size: 14px; line-height: 1.5;">Si les vérifications ci-dessus sont correctes, tu peux me signaler le souci :</p>
+
+        <div class="btn-group">
+            <a id="github-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-github">💻 Signaler un bug sur GitHub</a>
+            <button onclick="parent.location.reload();" class="btn btn-retry">🔄 Réessayer</button>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const username = params.get('user') || 'Inconnu';
+        const status = params.get('status') || 'Non spécifié';
+        const details = params.get('details') || 'Inconnus';
+
+        document.getElementById('error-details').innerHTML = `
+            <strong>Profil ciblé :</strong> ${username}<br>
+            <strong>Status HTTP :</strong> ${status}<br>
+            <strong>Détail technique :</strong> ${details}
+        `;
+
+        // Mise à jour de l'affichage du nom d'utilisateur dans l'URL de démo et le lien
+        document.getElementById('url-placeholder').textContent = username;
+        document.getElementById('current-username').textContent = `(${username})`;
+        document.getElementById('profile-test-link').href = `https://www.senscritique.com/${username}`;
+
+        // Redirection vers la liste globale des issues
+        document.getElementById('github-link').href = `https://github.com/phileastv/SensBoxd/issues`;
+    </script>
+</body>
+</html>

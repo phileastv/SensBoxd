@@ -7,7 +7,8 @@ const CONFIG = {
         URL: "https://apollo.senscritique.com/",
         BASE_URL: "https://senscritique.com",
         DEFAULT_LIMIT: 25,
-        AUTHORIZATION: 'null'
+        AUTHORIZATION: 'null',
+        GITHUB_ISSUES_URL: "https://github.com/phileastv/SensBoxd/issues/"
     },
     
     // UI Configuration
