@@ -63,7 +63,7 @@ const CONFIG = {
     
     // Request Headers
     HEADERS: {
-        USER_AGENT: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:139.0) Gecko/20100101 Firefox/139.0',
+        USER_AGENT: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/151.0',
         ACCEPT: '*/*',
         REFERER: 'https://www.senscritique.com/',
         ORIGIN: 'https://www.senscritique.com',

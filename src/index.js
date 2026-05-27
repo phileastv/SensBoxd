@@ -741,7 +741,7 @@ function drawNewItem(scUrl, imgUrl, name, year, rating, date, isWishlist) {
     if (imgUrl && imgUrl.includes('media.senscritique.com')) {
         img.src = `/src/proxy.php?csurl=${encodeURIComponent(imgUrl)}`;
     } else {
-    img.src = imgUrl;
+        img.src = imgUrl;
     }
     
     img.className = "poster";

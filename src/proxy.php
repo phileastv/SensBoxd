@@ -1,19 +1,17 @@
 <?php
 
-// Enable direct file logging for debugging
+// Activer le journal de débogage
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/proxy_debug.log');
 
-// Simple health check - if no X-Proxy-URL header, return status
+// Auto-diagnostic
 if (!isset($_SERVER['HTTP_X_PROXY_URL']) && !isset($_REQUEST['csurl'])) {
     header('Content-Type: application/json');
     header('Access-Control-Allow-Origin: *');
     echo json_encode([
         'status' => 'proxy_ready',
         'message' => 'SensBoxd Proxy is running',
-        'timestamp' => date('Y-m-d H:i:s'),
-        'method' => $_SERVER['REQUEST_METHOD'],
-        'php_version' => phpversion()
+        'timestamp' => date('Y-m-d H:i:s')
     ]);
     exit;
 }
@@ -38,30 +36,11 @@ if (!isset($_SERVER['HTTP_X_PROXY_URL']) && !isset($_REQUEST['csurl'])) {
  * Enables or disables filtering for cross domain requests.
  * Recommended value: true
  */
+
 define('CSAJAX_FILTERS', true);
-
-/**
- * If set to true, $valid_requests should hold only domains i.e. a.example.com, b.example.com, usethisdomain.com
- * If set to false, $valid_requests should hold the whole URL ( without the parameters ) i.e. http://example.com/this/is/long/url/
- * Recommended value: false (for security reasons - do not forget that anyone can access your proxy)
- */
 define('CSAJAX_FILTER_DOMAIN', true);
+define('CSAJAX_DEBUG', false);
 
-/**
- * Enables or disables Expect: 100-continue header. Some webservers don't 
- * handle this header correctly.
- * Recommended value: false
- */
-define('CSAJAX_SUPPRESS_EXPECT', false);
-
-/**
- * Set debugging to true to receive additional messages - really helpful on development
- */
-define('CSAJAX_DEBUG', true);
-
-/**
- * A set of valid cross domain requests
- */
 $valid_requests = array(
     'localhost',
     'sensboxd.phileas.tv',
@@ -72,305 +51,127 @@ $valid_requests = array(
     'media.senscritique.com'
 );
 
-/**
- * Set extra multiple options for cURL
- * Could be used to define CURLOPT_SSL_VERIFYPEER & CURLOPT_SSL_VERIFYHOST for HTTPS
- * Also to overwrite any other options without changing the code
- * See http://php.net/manual/en/function.curl-setopt-array.php
- */
-$curl_options = array(
-    CURLOPT_SSL_VERIFYPEER => true,
-    CURLOPT_SSL_VERIFYHOST => 2,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_TIMEOUT => 30,
-    CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1, // Force HTTP/1.1 to avoid HTTP/2 issues
-    CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; SensBoxd-Proxy/1.0)',
-    CURLOPT_ENCODING => 'identity', // Disable compression to avoid decoding issues
-);
-
-/* * * STOP EDITING HERE UNLESS YOU KNOW WHAT YOU ARE DOING * * */
-
-// identify request headers
-$request_headers = array( );
-$seen_headers = array(); // Track headers we've already added
-
-foreach ($_SERVER as $key => $value) {
-    if (strpos($key, 'HTTP_') === 0  ||  strpos($key, 'CONTENT_') === 0) {
-        $headername = str_replace('_', ' ', str_replace('HTTP_', '', $key));
-        $headername = str_replace(' ', '-', ucwords(strtolower($headername)));
-        
-        // Skip problematic headers that browsers block or that cause issues
-        $blocked_headers = array('Host', 'X-Proxy-Url', 'Referer', 'Origin', 'Sec-Fetch-Dest', 'Sec-Fetch-Mode', 'Sec-Fetch-Site', 'Sec-Gpc', 'Dnt', 'Accept-Encoding');
-        if (!in_array($headername, $blocked_headers) && !isset($seen_headers[strtolower($headername)])) {
-            $request_headers[] = "$headername: $value";
-            $seen_headers[strtolower($headername)] = true;
-        }
-    }
-}
-
-// identify request method, url and params
-$request_method = $_SERVER['REQUEST_METHOD'];
-if ('GET' == $request_method) {
-    $request_params = $_GET;
-} elseif ('POST' == $request_method) {
-    $request_params = $_POST;
-    if (empty($request_params)) {
-        $data = file_get_contents('php://input');
-        if (!empty($data)) {
-            $request_params = $data;
-        }
-    }
-} elseif ('PUT' == $request_method || 'DELETE' == $request_method) {
-    $request_params = file_get_contents('php://input');
-} else {
-    $request_params = null;
-}
-
-// Get URL from `csurl` in GET or POST data, before falling back to X-Proxy-URL header.
+// Obtenir l'URL cible
 if (isset($_REQUEST['csurl'])) {
     $request_url = urldecode($_REQUEST['csurl']);
 } elseif (isset($_SERVER['HTTP_X_PROXY_URL'])) {
     $request_url = urldecode($_SERVER['HTTP_X_PROXY_URL']);
 } else {
     header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
-    header('Status: 404 Not Found');
-    $_SERVER['REDIRECT_STATUS'] = 404;
     exit;
 }
 
 $p_request_url = parse_url($request_url);
 
-// csurl may exist in GET request methods
-if (is_array($request_params) && array_key_exists('csurl', $request_params)) {
-    unset($request_params['csurl']);
-}
-
-// ignore requests for proxy :)
-if (preg_match('!' . $_SERVER['SCRIPT_NAME'] . '!', $request_url) || empty($request_url) || count($p_request_url) == 1) {
-    csajax_debug_message('Invalid request - make sure that csurl variable is not empty');
+// Vérification de sécurité du domaine
+if (CSAJAX_FILTERS && !in_array($p_request_url['host'], $valid_requests)) {
+    header($_SERVER['SERVER_PROTOCOL'] . ' 403 Forbidden');
+    echo "Domain not allowed";
     exit;
 }
 
-// check against valid requests
-if (CSAJAX_FILTERS) {
-    $parsed = $p_request_url;
-    if (CSAJAX_FILTER_DOMAIN) {
-        if (!in_array($parsed['host'], $valid_requests)) {
-            csajax_debug_message('Invalid domain - ' . $parsed['host'] . ' does not included in valid requests');
-            exit;
-        }
-    } else {
-        $check_url = isset($parsed['scheme']) ? $parsed['scheme'] . '://' : '';
-        $check_url .= isset($parsed['user']) ? $parsed['user'] . ($parsed['pass'] ? ':' . $parsed['pass'] : '') . '@' : '';
-        $check_url .= isset($parsed['host']) ? $parsed['host'] : '';
-        $check_url .= isset($parsed['port']) ? ':' . $parsed['port'] : '';
-        $check_url .= isset($parsed['path']) ? $parsed['path'] : '';
-        if (!in_array($check_url, $valid_requests)) {
-            csajax_debug_message('Invalid domain - ' . $request_url . ' does not included in valid requests');
-            exit;
-        }
+$request_method = $_SERVER['REQUEST_METHOD'];
+$request_params = null;
+
+if ('GET' == $request_method) {
+    $request_params = $_GET;
+    if (is_array($request_params) && array_key_exists('csurl', $request_params)) {
+        unset($request_params['csurl']);
     }
+    if (count($request_params) > 0) {
+        $request_url .= (strpos($request_url, '?') === false ? '?' : '&') . http_build_query($request_params);
+    }
+} else {
+    $request_params = file_get_contents('php://input');
 }
 
-// append query string for GET requests
-if ($request_method == 'GET' && count($request_params) > 0 && (!array_key_exists('query', $p_request_url) || empty($p_request_url['query']))) {
-    $request_url .= '?' . http_build_query($request_params);
-}
-
-// let the request begin
 $ch = curl_init($request_url);
 
-// Debug: Log what we're sending
-if (CSAJAX_DEBUG) {
-    error_log("=== PROXY DEBUG ===");
-    error_log("Target URL: " . $request_url);
-    error_log("Request Method: " . $request_method);
-    error_log("Request Headers: " . print_r($request_headers, true));
-    error_log("Request Data: " . print_r($request_params, true));
-    error_log("==================");
+// Déterminer s'il s'agit d'une image ou d'une requête API
+$is_media = (strpos($request_url, 'media.senscritique.com') !== false);
+
+if ($is_media) {
+    // En-têtes simplifiés et propres pour le téléchargement d'images
+    $headers = array(
+        'Host: media.senscritique.com',
+        'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/151.0',
+        'Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Referer: https://www.senscritique.com/',
+        'Connection: keep-alive'
+    );
+} else {
+    // En-têtes pour les requêtes GraphQL Apollo
+    $headers = array(
+        'Host: apollo.senscritique.com',
+        'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/151.0',
+        'Accept: */*',
+        'Accept-Language: fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7',
+        'content-type: application/json',
+        'authorization: null',
+        'Origin: https://www.senscritique.com',
+        'Referer: https://www.senscritique.com/',
+        'Connection: keep-alive'
+    );
 }
 
-// Suppress Expect header
-if (CSAJAX_SUPPRESS_EXPECT) {
-    array_push($request_headers, 'Expect:'); 
+// Configuration de cURL
+$curl_options = array(
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HEADER => true,
+    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_SSL_VERIFYHOST => 2,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 10,
+    CURLOPT_HTTPHEADER => $headers,
+    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+    CURLOPT_ENCODING => 'gzip, deflate'
+);
+
+if ('POST' == $request_method && !$is_media) {
+    $curl_options[CURLOPT_POST] = true;
+    $curl_options[CURLOPT_POSTFIELDS] = $request_params;
 }
 
-// Add essential headers for SensCritique API and media
-if (strpos($request_url, 'apollo.senscritique.com') !== false) {
-    $request_headers[] = 'Referer: https://www.senscritique.com/';
-    $request_headers[] = 'Origin: https://www.senscritique.com';
-} elseif (strpos($request_url, 'media.senscritique.com') !== false) {
-    $request_headers[] = 'Referer: https://www.senscritique.com/';
-}
+curl_setopt_array($ch, $curl_options);
 
-curl_setopt($ch, CURLOPT_HTTPHEADER, $request_headers);   // (re-)send headers
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);     // return response
-curl_setopt($ch, CURLOPT_HEADER, true);       // enabled response headers
-// add data for POST, PUT or DELETE requests
-if ('POST' == $request_method) {
-    $post_data = is_array($request_params) ? http_build_query($request_params) : $request_params;
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS,  $post_data);
-} elseif ('PUT' == $request_method || 'DELETE' == $request_method) {
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $request_method);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $request_params);
-}
-
-// Set multiple options for curl according to configuration
-if (is_array($curl_options) && 0 <= count($curl_options)) {
-    curl_setopt_array($ch, $curl_options);
-}
-
-// retrieve response (headers and content)
 $response = curl_exec($ch);
 $curl_error = curl_error($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curl_info = curl_getinfo($ch);
 curl_close($ch);
 
-// Debug: Log response info
-if (CSAJAX_DEBUG) {
-    error_log("=== PROXY RESPONSE DEBUG ===");
-    error_log("HTTP Code: " . $http_code);
-    error_log("cURL Error: " . $curl_error);
-    error_log("Response Length: " . strlen($response));
-    error_log("cURL Info: " . print_r($curl_info, true));
-    error_log("============================");
-}
-
-// Handle cURL errors
-if ($response === false || !empty($curl_error)) {
-    // If it's an HTTP/2 protocol error, try again with HTTP/1.0
-    if (strpos($curl_error, 'HTTP/2') !== false || strpos($curl_error, 'PROTOCOL_ERROR') !== false) {
-        error_log("HTTP/2 error detected, retrying with HTTP/1.0");
-        
-        // Retry with HTTP/1.0
-        $ch_retry = curl_init($request_url);
-        curl_setopt($ch_retry, CURLOPT_HTTPHEADER, $request_headers);
-        curl_setopt($ch_retry, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch_retry, CURLOPT_HEADER, true);
-        curl_setopt($ch_retry, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-        curl_setopt($ch_retry, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch_retry, CURLOPT_SSL_VERIFYHOST, 2);
-        curl_setopt($ch_retry, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch_retry, CURLOPT_CONNECTTIMEOUT, 10);
-        
-        if ('POST' == $request_method) {
-            $post_data = is_array($request_params) ? http_build_query($request_params) : $request_params;
-            curl_setopt($ch_retry, CURLOPT_POST, true);
-            curl_setopt($ch_retry, CURLOPT_POSTFIELDS, $post_data);
-        }
-        
-        $response = curl_exec($ch_retry);
-        $curl_error = curl_error($ch_retry);
-        $http_code = curl_getinfo($ch_retry, CURLINFO_HTTP_CODE);
-        curl_close($ch_retry);
-        
-        if ($response === false || !empty($curl_error)) {
-            http_response_code(500);
-            header('Content-Type: application/json');
-            echo json_encode(array(
-                'error' => 'Proxy cURL Error (after retry)',
-                'message' => $curl_error,
-                'http_code' => $http_code
-            ));
-            exit;
-        }
-    } else {
-        http_response_code(500);
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            'error' => 'Proxy cURL Error',
-            'message' => $curl_error,
-            'http_code' => $http_code
-        ));
-        exit;
-    }
-}
-
-// Add CORS headers for HTTPS compatibility
+// CORS headers pour le client JS
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Proxy-URL');
-header('Access-Control-Max-Age: 86400');
 
-// Ensure proper content type for different response types
-if (strpos($request_url, 'apollo.senscritique.com') !== false) {
-    header('Content-Type: application/json; charset=utf-8');
-} elseif (strpos($request_url, 'media.senscritique.com') !== false) {
-    // For images, let the original content-type header pass through
-    // We'll handle this in the header processing below
-}
-
-// Handle preflight OPTIONS requests
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-// split response to header and content
-$response_parts = preg_split('/(\r\n){2}/', $response, 2);
-if (count($response_parts) < 2) {
-    // If we can't split headers and content, treat entire response as content
-    $response_headers = '';
-    $response_content = $response;
+if ($response === false) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(array('error' => 'Proxy Error', 'message' => $curl_error));
+    exit;
+}
+
+// Extraction propre des en-têtes et du contenu binaire
+list($response_headers, $response_content) = preg_split('/(\r\n){2}/', $response, 2);
+
+if ($is_media) {
+    // Détecter l'extension pour renvoyer le bon en-tête image
+    $ext = pathinfo(parse_url($request_url, PHP_URL_PATH), PATHINFO_EXTENSION);
+    if ($ext === 'png') {
+        header('Content-Type: image/png');
+    } elseif ($ext === 'gif') {
+        header('Content-Type: image/gif');
+    } else {
+        header('Content-Type: image/jpeg');
+    }
 } else {
-    list($response_headers, $response_content) = $response_parts;
+    header('Content-Type: application/json; charset=utf-8');
 }
 
-// (re-)send the headers
-if (!empty($response_headers)) {
-    $response_headers_array = preg_split('/(\r\n){1}/', $response_headers);
-    foreach ($response_headers_array as $key => $response_header) {
-        // Skip empty headers
-        if (empty(trim($response_header))) {
-            continue;
-        }
-        
-        // Rewrite the `Location` header, so clients will also use the proxy for redirects.
-        if (preg_match('/^Location:/', $response_header)) {
-            list($header, $value) = preg_split('/: /', $response_header, 2);
-            $response_header = 'Location: ' . $_SERVER['REQUEST_URI'] . '?csurl=' . $value;
-        }
-        // Skip problematic headers that we've already set or that cause issues
-        // For images, allow Content-Type to pass through
-        if (strpos($request_url, 'media.senscritique.com') !== false) {
-            if (!preg_match('/^(Transfer-Encoding|Access-Control-Allow|Content-Encoding|Content-Length):/', $response_header)) {
-                header($response_header, false);
-            }
-        } else {
-            if (!preg_match('/^(Transfer-Encoding|Access-Control-Allow|Content-Encoding|Content-Length):/', $response_header)) {
-                header($response_header, false);
-            }
-        }
-    }
-}
-
-// Debug: Log final response
-if (CSAJAX_DEBUG) {
-    error_log("=== FINAL RESPONSE DEBUG ===");
-    error_log("Response Content Length: " . strlen($response_content));
-    error_log("Response Content Preview: " . substr($response_content, 0, 200));
-    error_log("============================");
-}
-
-// Check if response contains GraphQL errors and log them
-if (strpos($response_content, '"errors"') !== false) {
-    $json_response = json_decode($response_content, true);
-    if ($json_response && isset($json_response['errors'])) {
-        error_log("=== GRAPHQL ERRORS DETECTED ===");
-        error_log("GraphQL Errors: " . print_r($json_response['errors'], true));
-        error_log("===============================");
-    }
-}
-
-// finally, output the content
 print($response_content);
-
-function csajax_debug_message($message)
-{
-    if (true == CSAJAX_DEBUG) {
-        print $message . PHP_EOL;
-    }
-}
