@@ -27,7 +27,43 @@ const floatingLoader = document.querySelector("#floating-loader");
 let lastScrollTop = 0;
 let scrollTimeout = null;
 
-// Direct proxy requests - no AJAX prefilter needed
+// ---------------------------------------------------------------------------
+// Retry & throttle utilities
+// ---------------------------------------------------------------------------
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const requestThrottler = {
+    _lastTime: 0,
+    async throttle() {
+        const wait = CONFIG.RETRY.MIN_REQUEST_INTERVAL_MS - (Date.now() - this._lastTime);
+        if (wait > 0) await sleep(wait);
+        this._lastTime = Date.now();
+    }
+};
+
+/**
+ * Wrapper around $.ajax that retries on transient server errors (503, 429…)
+ * using exponential backoff, and enforces a global minimum interval between
+ * requests to avoid being flagged as a DDoS source.
+ */
+async function ajaxWithRetry(options) {
+    const { MAX_ATTEMPTS, BASE_DELAY_MS, RETRYABLE_CODES } = CONFIG.RETRY;
+    for (let attempt = 0; attempt <= MAX_ATTEMPTS; attempt++) {
+        await requestThrottler.throttle();
+        try {
+            return await $.ajax(options);
+        } catch (err) {
+            const isRetryable = RETRYABLE_CODES.includes(err.status);
+            if (!isRetryable || attempt === MAX_ATTEMPTS) throw err;
+            const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+            showSnackbar(`Erreur ${err.status} — Nouvelle tentative dans ${delay / 1000}s... (${attempt + 1}/${MAX_ATTEMPTS})`);
+            await sleep(delay);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 
 /**
  * Test proxy connectivity
@@ -254,7 +290,7 @@ async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false)
     const queryData = defineQueryData(stateManager.get('username'), numberToLoad);
     
     try {
-        const data = await $.ajax({
+        const data = await ajaxWithRetry({
             url: '/src/proxy.php',
             type: "POST",
             data: JSON.stringify(queryData),
@@ -358,7 +394,10 @@ function handleApiError(error) {
 
    // Si des données ont déjà été chargées : alerte discrète en Snackbar
    if (totalLoadedCount > 0) {
-       showSnackbar(`⚠️ Une erreur est survenue lors de la récupération de la page suivante (${errorStatus}).`);
+       const detailSuffix = errorDetails && errorDetails !== "Impossible de joindre l'API de SensCritique."
+           ? ` — ${errorDetails}`
+           : '';
+       showSnackbar(`⚠️ Erreur ${errorStatus} lors de la récupération de la page suivante.${detailSuffix}`);
        const submitBtn = document.getElementById("submit");
        if (submitBtn) {
            submitBtn.style.display = 'block';

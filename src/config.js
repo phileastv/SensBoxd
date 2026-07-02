@@ -71,6 +71,14 @@ const CONFIG = {
         CONTENT_TYPE: 'application/json'
     },
     
+    // Retry & throttle configuration
+    RETRY: {
+        MAX_ATTEMPTS: 3,
+        BASE_DELAY_MS: 2000,
+        RETRYABLE_CODES: [429, 502, 503, 504],
+        MIN_REQUEST_INTERVAL_MS: 900
+    },
+
     // Constants
     CONSTANTS: {
         MOVIE_UNIVERSE_ID: 1,

@@ -1,6 +1,12 @@
 {
   "changelog": [
     {
+      "date": "2026-07-02",
+      "version": "v4.5",
+      "description": "⏳ Cooldown entre les requêtes",
+    "details": "Certains utilisateurs signalaient des erreurs 503, maintenant, les requêtes auront un de cooldown."
+    },
+    {
       "date": "2026-05-27",
       "version": "v4.4",
       "description": "👌 Correction du proxy",
