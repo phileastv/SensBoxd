@@ -9,6 +9,7 @@
   --bg2: var(--grey);
   --text: white;
   --headerheight: 100px;
+  --header-top-offset: 230px;
   color-scheme: dark;
 }
 
@@ -21,16 +22,46 @@ body {
 }
 
 .logo {
-  width: var(--headerheight);
+  width: 130px;
+}
+
+/* Header brand: logo + title stacked, centered */
+.header-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.brand-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.06em;
+  color: var(--text);
 }
 
 #header-center {
   text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
 }
-  
+
+#header-left {
+  width: var(--headerheight);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
 #header-right {
   width: var(--headerheight);
   margin-right: 25px;
+  flex-shrink: 0;
 }
 
 #header {
@@ -42,19 +73,220 @@ body {
   width: 100%;
   display: flex;
   justify-content: space-between;
-  padding: 15px;
+  padding: 10px 15px;
+  align-items: flex-start;
+  transition: padding 0.35s ease, align-items 0s 0.35s;
+}
+
+/* ── Transitions des éléments animés entre les deux états ── */
+.header-brand,
+.form {
+  transition: opacity 0.3s ease, max-height 0.35s ease;
+  overflow: hidden;
+  max-height: 300px;
+  opacity: 1;
+}
+
+#logo-compact,
+#header-username-compact {
+  transition: opacity 0.3s ease, max-height 0.35s ease;
+  overflow: hidden;
+}
+
+/* État home : éléments compacts masqués */
+#logo-compact {
+  opacity: 0;
+  pointer-events: none;
+  max-height: 0;
+  display: block;
+}
+
+#header-username-compact {
+  display: flex;
   align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  max-height: 0;
+}
+
+/* ── État compact (après chargement) ── */
+#header.header-compact {
+  padding: 8px 15px;
+  align-items: center;
+}
+
+#header.header-compact .header-brand,
+#header.header-compact .form {
+  opacity: 0;
+  max-height: 0;
+  pointer-events: none;
+}
+
+#header.header-compact #logo-compact {
+  opacity: 1;
+  pointer-events: auto;
+  max-height: 60px;
+}
+
+#header.header-compact #header-username-compact {
+  opacity: 1;
+  pointer-events: auto;
+  max-height: 60px;
+}
+
+/* Styles du bloc compact */
+#logo-compact {
+  width: 90px;
+}
+
+#header-username-text {
+  font-weight: 700;
+  font-size: 0.95em;
+}
+
+#profileavatar {
+  border-radius: 50%;
+}
+
+/* Transition du padding du contenu principal */
+#main-content {
+  transition: padding-top 0.35s ease;
+}
+
+body.header-compact #main-content {
+  padding-top: 110px;
+}
+
+/* Username input — two-line, bigger */
+#usernameinputgroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  margin-top: 30px;
+}
+
+#usernameinputgroup label {
+  font-size: 0.8em;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#username {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05em;
+  font-weight: 700;
+  background: var(--grey);
+  border: 1px solid #444;
+  border-radius: 10px;
+  color: var(--text);
+  padding: 7px 14px;
+  width: 200px;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+#username:focus {
+  outline: none;
+  border-color: var(--green);
+}
+
+/* Form: centered container */
+.form {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* numberinputgroup: fixed width prevents layout shift */
+#numberinputgroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 260px;
 }
 
 #submit,
 #nextpage {
+  font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
+  font-size: 0.95em;
   background-color: var(--green);
   border: 0;
-  padding: 5px;
-  border-radius: 17px;
+  padding: 8px 18px;
+  border-radius: 20px;
   color: white;
   cursor: pointer;
+  width: 100%;
+  margin-bottom: 6px;
+  transition: background-color 0.2s, transform 0.15s;
+}
+
+#submit:hover {
+  background-color: #07b85e;
+  transform: translateY(-1px);
+}
+
+/* Advanced toggle button */
+.advanced-toggle-row {
+  margin-bottom: 4px;
+}
+
+.advanced-toggle-btn {
+  background: none;
+  border: none;
+  color: #777;
+  font-size: 0.75em;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline dotted;
+  transition: color 0.15s;
+}
+
+.advanced-toggle-btn:hover {
+  color: #bbb;
+}
+
+/* Advanced options panel — same width as container, no layout shift */
+.advanced-options {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: var(--grey);
+  border-radius: 8px;
+  border: 1px solid #333;
+  text-align: left;
+  margin-top: 4px;
+}
+
+.advanced-hint {
+  font-size: 0.78em;
+  color: #888;
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  flex-wrap: wrap;
+}
+
+.range-row input[type="number"] {
+  width: 4.5em;
+  background: var(--dark);
+  border: 1px solid #555;
+  border-radius: 6px;
+  color: var(--text);
+  padding: 3px 6px;
+  font-family: inherit;
 }
 
 /* Export Dropdown Styles */
@@ -153,7 +385,8 @@ body {
 }
 
 #main-content {
-  padding-top: var(--headerheight);
+  padding-top: var(--header-top-offset);
+  transition: padding-top 0.35s ease;
 }
 
 .poster {
@@ -200,7 +433,7 @@ img.animate {
 /* Universe Tabs */
 #universe-tabs {
   width: 100%;
-  padding: 20px 0;
+  padding: 6px 0;
   background-color: var(--bg);
   border-bottom: 1px solid var(--grey);
 }
@@ -636,23 +869,75 @@ However, delay the fade out process for 2.5 seconds */
   animation: countBounce 0.6s ease-out;
 }
 
+.loader-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 #floating-loader .count-text {
   font-size: 18px;
   font-weight: 700;
-  margin-right: 12px;
   display: inline-block;
 }
 
 #floating-loader .loading-icon {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-  margin-left: 8px;
-  float: right;
-  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
 }
 
 #floating-loader .loading-icon.hidden {
-  display: none;
+  visibility: hidden;
+}
+
+/* CSS spinner */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Stop / Resume button */
+.stop-resume-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  color: white;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  text-align: center;
+}
+
+.stop-resume-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: white;
+}
+
+.stop-resume-btn.is-resume {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+
+.stop-resume-btn.is-resume:hover {
+  background: #07b85e;
+  border-color: #07b85e;
 }
 
 #floating-loader .auto-scroll-control {

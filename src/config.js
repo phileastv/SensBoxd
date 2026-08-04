@@ -73,10 +73,10 @@ const CONFIG = {
     
     // Retry & throttle configuration
     RETRY: {
-        MAX_ATTEMPTS: 3,
-        BASE_DELAY_MS: 2000,
+        MAX_ATTEMPTS: 5,
+        BASE_DELAY_MS: 4000,
         RETRYABLE_CODES: [429, 502, 503, 504],
-        MIN_REQUEST_INTERVAL_MS: 900
+        MIN_REQUEST_INTERVAL_MS: 2000
     },
 
     // Constants

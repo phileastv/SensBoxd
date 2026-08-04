@@ -26,18 +26,74 @@ Vous obtiendrez à la fin un fichier .CSV contenant tous vos films, la note & la
 
 ### Prérequis
 
-- **PHP 5.3+** minimum requis
+- **PHP 7.4+** (recommandé : PHP 8+)
 - Un navigateur web moderne
 
-### Démarrage du serveur
+### Installation de PHP (si absent)
 
-1. Clonez ou téléchargez ce projet
-2. Ouvrez un terminal dans le dossier du projet
-3. Démarrez le serveur PHP de développement :
+**macOS** (via [Homebrew](https://brew.sh/)) :
+```bash
+brew install php
+```
+
+**Linux (Debian/Ubuntu)** :
+```bash
+sudo apt install php-cli php-curl
+```
+
+**Windows** : télécharger depuis [windows.php.net](https://windows.php.net/download/)
+
+### Démarrage du serveur de dev
+
+**Méthode recommandée** (script tout-en-un qui gère les cas particuliers) :
+```bash
+./dev.sh              # port 9000 par défaut
+./dev.sh 8080         # ou choisis ton port
+```
+
+**Méthode manuelle** :
 ```bash
 php -S localhost:9000
 ```
-4. Ouvrez votre navigateur à l'adresse : `http://localhost:9000`
+
+Puis ouvre `http://localhost:9000` dans ton navigateur.
+
+> ⚠️ **Si tu lances depuis le terminal intégré de Cursor** : utilise `./dev.sh` obligatoirement.
+> Cursor exporte des variables `HTTP_PROXY` / `HTTPS_PROXY` (proxy sandbox) que PHP/cURL hérite,
+> ce qui fait échouer les requêtes vers l'API SensCritique avec l'erreur
+> `CONNECT tunnel failed, response 403`. Le script `dev.sh` supprime ces variables au lancement.
+
+### 💡 Workflow de dev
+
+**Vider le cache navigateur** : les fichiers JS et CSS ont un paramètre `?v=NN` qui doit être bumpé à chaque modification :
+```html
+<script defer src="src/index.js?v=21" charset="utf-8"></script>
+<link rel="stylesheet" href="css/style.css?v=21">
+```
+Incrémente le numéro dans [`index.html`](index.html) pour forcer un rechargement côté navigateur.
+
+**Hard-refresh** pendant le dev pour bypasser le cache HTTP :
+- macOS : `Cmd + Shift + R`
+- Windows/Linux : `Ctrl + Shift + R`
+
+**DevTools** : ouvrir avec `F12`, onglet **Network** → cocher **Disable cache** pendant que DevTools est ouvert.
+
+### Structure du projet
+
+```
+SensBoxd/
+├── index.html              # Page principale
+├── help.html               # Panneau d'erreur (403, profil privé…)
+├── css/style.css           # Styles
+├── src/
+│   ├── config.js           # Config API, UI, retry/throttle
+│   ├── graphql-queries.js  # Query GraphQL UserCollection
+│   ├── state-manager.js    # Gestion d'état + listeners
+│   ├── index.js            # Logique métier (load, retry, export)
+│   └── proxy.php           # Proxy CORS → API SensCritique
+├── data/changelog.json     # Changelog affiché sur la page
+└── img/, video/            # Assets
+```
 
 ### À propos du proxy CORS
 

@@ -60,6 +60,8 @@ class StateManager {
             const oldValue = this.state[key];
             this.state[key] = value;
             changes[key] = { newValue: value, oldValue };
+            // Also fire individual key listeners (fix: previously only batch_update fired)
+            this.notifyListeners(key, value, oldValue);
         }
         this.notifyListeners('batch_update', changes, null);
     }

@@ -1,0 +1,1 @@
+[04-Aug-2026 12:14:25 UTC] PHP Deprecated:  Function curl_close() is deprecated since 8.5, as it has no effect since PHP 8.0 in /Users/phileas/Documents/Dev/SensBoxd/src/proxy.php on line 141

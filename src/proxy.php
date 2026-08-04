@@ -1,6 +1,8 @@
 <?php
 
-// Activer le journal de débogage
+// Log les erreurs dans un fichier au lieu de les envoyer dans la réponse HTTP
+// (sinon les deprecation warnings de PHP 8.5+ cassent le parsing JSON côté client).
+ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/proxy_debug.log');
 
@@ -138,7 +140,11 @@ curl_setopt_array($ch, $curl_options);
 $response = curl_exec($ch);
 $curl_error = curl_error($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+// curl_close() is deprecated since PHP 8.5 (handles are auto-freed by GC).
+// Keep the call for older PHP versions but silence the deprecation warning.
+if (PHP_VERSION_ID < 80500) {
+    @curl_close($ch);
+}
 
 // CORS headers pour le client JS
 header('Access-Control-Allow-Origin: *');

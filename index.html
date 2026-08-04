@@ -6,12 +6,12 @@
     <title>SensBoxd</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <!-- Configuration and modules -->
-    <script defer src="src/config.js?v=16" charset="utf-8"></script>
-    <script defer src="src/graphql-queries.js?v=16" charset="utf-8"></script>
-    <script defer src="src/state-manager.js?v=16" charset="utf-8"></script>
+    <script defer src="src/config.js?v=23" charset="utf-8"></script>
+    <script defer src="src/graphql-queries.js?v=23" charset="utf-8"></script>
+    <script defer src="src/state-manager.js?v=23" charset="utf-8"></script>
     <!-- Main application -->
-    <script defer src="src/index.js?v=16" charset="utf-8"></script>
-    <link rel="stylesheet" href="css/style.css">
+    <script defer src="src/index.js?v=23" charset="utf-8"></script>
+    <link rel="stylesheet" href="css/style.css?v=23">
 	<meta name="description" content="L'outil de migration simple pour passer de SensCritique à Letterboxd.">
     <meta property="og:title" content="Add title here">
     <meta property="og:description" content="SensBoxd : exporter ses données SensCritique vers Letterboxd.">
@@ -26,35 +26,42 @@
 <body>
     <div id="header" class="header">
         <div id="header-left" class="header-left">
-            <a href="./">
-                <img class="logo" src="./img/Sens2Boxd-logo.svg" alt="Migration SensCritique Letterboxd"/>
-            </a>
+            <a href="./"><img id="logo-compact" class="logo-compact" src="./img/Sens2Boxd-logo.svg" alt="SensBoxd"/></a>
         </div>
         <div id="header-center" class="header-center">
+            <div class="header-brand">
+                <a href="./">
+                    <img class="logo" src="./img/Sens2Boxd-logo.svg" alt="SensBoxd"/>
+                </a>
+                <h1 class="brand-title">SensBoxd</h1>
+            </div>
             <div class="form">
                 <form id="form">
-                    <div>
-                        <div id="usernameinputgroup">
-                            <label>Username SC:</label>
-                            <input id="username" name="username" type="username">
-                        </div>
-
-                        </br>
-                        <div id="numberinputgroup">
-                            <label for="numbertoload">Charger </label>
-                            <input id="numbertoload" type="number" value="25" max="1000" min="1" style="width: 4em;">
-                            <label for="loadallprofile">élements OU charger toute ma collection :</label>
-                            <input id="loadallprofile" type="checkbox">
-                            <input id="submit" type="submit" value="Et zé parti !">
-                        </div>
+                    <div id="usernameinputgroup">
+                        <label for="username">Mon Username SensCritique</label>
+                        <input id="username" name="username" type="text" placeholder="ex: phileas_imt">
                     </div>
-                    <div>
-
+                    <div id="numberinputgroup">
+                        <input id="submit" type="submit" value="Charger ma collection">
+                        <div class="advanced-toggle-row">
+                            <button type="button" id="advanced-toggle-btn" class="advanced-toggle-btn">⚙ Options avancées</button>
+                        </div>
+                        <div id="advanced-options" class="advanced-options" style="display:none;">
+                            <p class="advanced-hint">Tu as une grande collection et tu obtiens des erreurs ? Charge-la en plusieurs fois en définissant une plage. Ex : lance d'abord les entrées <strong>0 → 400</strong>, puis relance avec <strong>400 → 800</strong>, etc.</p>
+                            <div class="range-row">
+                                <label for="range-start">De l'entrée</label>
+                                <input id="range-start" type="number" value="0" min="0" placeholder="0">
+                                <label for="range-end">à</label>
+                                <input id="range-end" type="number" value="400" min="1" placeholder="400">
+                            </div>
+                        </div>
                     </div>
                 </form>
-                <!-- <button id="nextpage" style="display: none" type="button">Charger la page suivante.</button> -->
             </div>
-
+            <div id="header-username-compact">
+                <div id="useravatar"></div>
+                <span id="header-username-text"></span>
+            </div>
             <div id="loader" style="display: none">Je mouline je mouline...</div>
         </div>
         <div id="header-right" class="header-right">
@@ -78,8 +85,6 @@
                 </div>
             </div>
         </div>
-
-
     </div>
 
     <div id="snackbar"></div>
@@ -96,8 +101,11 @@
     
     <!-- Floating Progress Indicator -->
     <div id="floating-loader">
-        <span class="count-text">0</span>
-        <span class="loading-icon">⚙️</span>
+        <div class="loader-top-row">
+            <span class="count-text">0</span>
+            <span class="loading-icon"><span class="spinner"></span></span>
+        </div>
+        <button id="stop-resume-btn" class="stop-resume-btn" style="display:none;">◼ Arrêter</button>
         <div class="auto-scroll-control">
             <input type="checkbox" id="auto-scroll-checkbox" checked>
             <label for="auto-scroll-checkbox">Auto-scroll</label>

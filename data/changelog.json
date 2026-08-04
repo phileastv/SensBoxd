@@ -1,6 +1,12 @@
 {
   "changelog": [
     {
+      "date": "2026-08-04",
+      "version": "v4.6",
+      "description": "🫶 Améliorations",
+    "details": "Malgré la mise à jour précédente, certains utilisateurs avaient toujours des soucis. Cooldown amélioré, design de la page d'acceuil refait et parcours simplifié avec un bouton unique 'Charger ma collection' qu'il est ensuite possible d'interrompre et de reprendre. Il y a également une nouvelle fonctionnalité pour choisir une plage précise."
+    },
+    {
       "date": "2026-07-02",
       "version": "v4.5",
       "description": "⏳ Cooldown entre les requêtes",

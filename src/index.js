@@ -27,6 +27,10 @@ const floatingLoader = document.querySelector("#floating-loader");
 let lastScrollTop = 0;
 let scrollTimeout = null;
 
+// Loading abort / resume
+let loadingAborted = false;
+let savedLoadParams = null; // { numberToLoad, loadAllCollection, endOffset }
+
 // ---------------------------------------------------------------------------
 // Retry & throttle utilities
 // ---------------------------------------------------------------------------
@@ -57,7 +61,10 @@ async function ajaxWithRetry(options) {
             const isRetryable = RETRYABLE_CODES.includes(err.status);
             if (!isRetryable || attempt === MAX_ATTEMPTS) throw err;
             const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-            showSnackbar(`Erreur ${err.status} — Nouvelle tentative dans ${delay / 1000}s... (${attempt + 1}/${MAX_ATTEMPTS})`);
+            const loaded = stateManager.get('products')?.length ?? 0;
+            const total = stateManager.get('total') ?? 0;
+            const progressInfo = total > 0 ? ` (${loaded}/${total} chargés)` : '';
+            showSnackbar(`⚠️ Erreur ${err.status}${progressInfo} — Nouvelle tentative dans ${delay / 1000}s… (${attempt + 1}/${MAX_ATTEMPTS})`);
             await sleep(delay);
         }
     }
@@ -105,6 +112,20 @@ $(document).ready(function() {
     $('#form').submit(function(e) {
         e.preventDefault();
         handleFormSubmission();
+    });
+
+    // Bouton "Options avancées" — ouvre/ferme la plage et met à jour le texte du bouton submit
+    $('#advanced-toggle-btn').on('click', function() {
+        const panel = $('#advanced-options');
+        const opening = !panel.is(':visible');
+        panel.toggle(opening);
+        $(this).text(opening ? '✕ Fermer les options avancées' : '⚙ Options avancées');
+        updateSubmitButtonText();
+    });
+
+    // Mise à jour du texte du bouton submit en temps réel quand on change les valeurs de plage
+    $('#range-start, #range-end').on('input', function() {
+        updateSubmitButtonText();
     });
 });
 
@@ -165,14 +186,21 @@ function initializeScrollDetection() {
         }, 100);
     });
     
-    // Add click handler for floating loader (but not for checkbox)
+    // Add click handler for floating loader (but not for checkbox or stop/resume btn)
     floatingLoader.addEventListener('click', function(e) {
-        // Don't toggle if clicking on checkbox or label
-        if (e.target.type === 'checkbox' || e.target.tagName === 'LABEL') {
+        if (e.target.type === 'checkbox' || e.target.tagName === 'LABEL' || e.target.id === 'stop-resume-btn') {
             return;
         }
-        console.log('🎯 Floating loader clicked');
         toggleAutoScroll();
+    });
+
+    // Stop / Resume button
+    document.getElementById('stop-resume-btn').addEventListener('click', function() {
+        if (loadingAborted) {
+            resumeLoading();
+        } else {
+            stopLoading();
+        }
     });
     
     // Add specific handler for checkbox
@@ -226,6 +254,20 @@ function handleScrollDetection(currentScrollTop) {
 }
 
 /**
+ * Update the submit button text based on the current mode
+ */
+function updateSubmitButtonText() {
+    const isRange = $('#advanced-options').is(':visible');
+    if (isRange) {
+        const start = parseInt($('#range-start').val()) || 0;
+        const end = parseInt($('#range-end').val()) || 400;
+        $('#submit').val(`Charger les entrées ${start} → ${end}`);
+    } else {
+        $('#submit').val('Charger ma collection');
+    }
+}
+
+/**
  * Handle form submission and initialize data loading
  */
 function handleFormSubmission() {
@@ -233,12 +275,25 @@ function handleFormSubmission() {
     
     // Update state with form values
     const username = $("#username").val();
-    const numberToLoad = $("#numbertoload").val();
-    const loadAllCollection = $("#loadallprofile").is(":checked");
-    
+    const isRangeMode = $('#advanced-options').is(':visible');
+
+    let startOffset = 0;
+    let endOffset = null;
+    const itemsPerLoad = CONFIG.API.DEFAULT_LIMIT;
+
+    if (isRangeMode) {
+        startOffset = Math.max(0, parseInt($("#range-start").val()) || 0);
+        endOffset = Math.max(startOffset + 1, parseInt($("#range-end").val()) || startOffset + 400);
+    }
+
+    // Set abort flag and params BEFORE stateManager.update so updateFloatingLoader
+    // already has savedLoadParams when isLoading triggers it
+    loadingAborted = false;
+    savedLoadParams = { numberToLoad: itemsPerLoad, loadAllCollection: true, endOffset };
+
     stateManager.update({
         username: username,
-        offset: 0,
+        offset: startOffset,
         currentPage: 0,
         products: [],
         total: 0,
@@ -259,24 +314,28 @@ function handleFormSubmission() {
     
     // Update UI
     updateUIForDataLoading(username);
-    
-    // Start loading data
-    const itemsPerLoad = loadAllCollection ? CONFIG.API.DEFAULT_LIMIT : parseInt(numberToLoad);
-    loadNewPageFromQueryData(itemsPerLoad, loadAllCollection);
+
+    // Toujours charger toute la collection (ou jusqu'à la borne de plage si mode avancé)
+    loadNewPageFromQueryData(itemsPerLoad, true, endOffset);
 }
 
 /**
- * Update UI elements when starting data loading
+ * Update UI elements when starting data loading.
+ * Uses a CSS class transition instead of innerHTML replacement for a smooth animation.
  */
 function updateUIForDataLoading(username) {
-        document.querySelector('#welcome-explainer').innerHTML = "";
-        document.getElementById("posterlist").innerHTML = "";
-        document.getElementById("submit").style.display = 'none';
-        document.querySelector('#usernameinputgroup').innerHTML = "";
-    document.querySelector('#numberinputgroup').innerHTML = 
-        `<div id='useravatar'></div><h3 style='margin-top: 0px; margin-bottom: 0px;'>Le SensCritique de ${username}</h3>`;
-    
-    // Hide bento boxes when loading starts
+    // Populate the compact username area before triggering the transition
+    document.getElementById('header-username-text').textContent = username;
+
+    // Trigger the CSS transition: home header → compact header
+    document.getElementById('header').classList.add('header-compact');
+    document.body.classList.add('header-compact');
+
+    // Clear homepage content
+    document.querySelector('#welcome-explainer').innerHTML = '';
+    document.getElementById('posterlist').innerHTML = '';
+
+    // Hide bento boxes
     const bentoContainer = document.querySelector('.bento-container');
     if (bentoContainer) {
         bentoContainer.style.display = 'none';
@@ -285,8 +344,11 @@ function updateUIForDataLoading(username) {
 
 /**
  * Load data from SensCritique API
+ * @param {number} numberToLoad - Items per page
+ * @param {boolean} loadAllCollection - Whether to keep paginating
+ * @param {number|null} endOffset - Stop pagination at this offset (range mode), null = no limit
  */
-async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false) {
+async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false, endOffset = null) {
     const queryData = defineQueryData(stateManager.get('username'), numberToLoad);
     
     try {
@@ -303,7 +365,7 @@ async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false)
             }
         });
         
-        await handleApiResponse(data, numberToLoad, loadAllCollection);
+        await handleApiResponse(data, numberToLoad, loadAllCollection, endOffset);
         
     } catch (error) {
         handleApiError(error);
@@ -313,7 +375,7 @@ async function loadNewPageFromQueryData(numberToLoad, loadAllCollection = false)
 /**
  * Handle successful API response and manage profile errors
  */
-async function handleApiResponse(data, numberToLoad, loadAllCollection = false) {
+async function handleApiResponse(data, numberToLoad, loadAllCollection = false, endOffset = null) {
     // CAS DU PROFIL INTROUVABLE OU PRIVÉ (data.data.user est null)
     if (data.data.user == null) {
         // On crée un objet d'erreur simulé pour déclencher proprement le panneau d'aide help.html
@@ -363,10 +425,27 @@ async function handleApiResponse(data, numberToLoad, loadAllCollection = false) 
                 hideLoader();
                 showExportButton();
     
-    // Continue loading if needed
+    // Continue loading if needed, respecting optional endOffset (range mode)
     if (loadAllCollection && stateManager.hasMoreProducts()) {
+        const nextOffset = stateManager.get('offset') + numberToLoad;
+        if (endOffset !== null && nextOffset >= endOffset) {
+            // Range limit reached — true end of loading
+            stateManager.set('isLoading', false);
+            return;
+        }
         stateManager.incrementOffset(numberToLoad);
-        await loadNewPageFromQueryData(numberToLoad, loadAllCollection);
+        // Keep savedLoadParams up to date so resume always starts from current position
+        if (savedLoadParams) {
+            savedLoadParams = { numberToLoad, loadAllCollection, endOffset };
+        }
+        if (loadingAborted) {
+            // User stopped — isLoading is already set to false by stopLoading()
+            return;
+        }
+        await loadNewPageFromQueryData(numberToLoad, loadAllCollection, endOffset);
+    } else {
+        // No more pages — true end of loading
+        stateManager.set('isLoading', false);
     }
 }
 
@@ -376,6 +455,7 @@ async function handleApiResponse(data, numberToLoad, loadAllCollection = false) 
 function handleApiError(error) {
    console.error('❌ AJAX Error:', error);
    hideLoader();
+   stateManager.set('isLoading', false);
 
    const username = stateManager.get('username') || "Inconnu";
    const errorStatus = error.status || "Erreur réseau";
@@ -847,11 +927,13 @@ function showLoader() {
 }
 
 /**
- * Hide loading indicator
+ * Hide the visual #loader element ("ça mouline...").
+ * Does NOT touch isLoading — that flag stays true across the full
+ * multi-page collection load, so the floating loader spinner and
+ * "Arrêter" button stay visible until every page is fetched.
  */
 function hideLoader() {
     loader.style.display = 'none';
-    stateManager.set('isLoading', false);
 }
 
 /**
@@ -994,7 +1076,7 @@ function updateFloatingLoader() {
             autoScrollCheckbox.checked = autoScrollEnabled;
         }
         
-        // Show/hide loading icon based on loading state
+        // Show/hide spinner based on loading state
         if (isLoading) {
             loadingIcon.classList.remove('hidden');
             floatingLoader.classList.add('loading');
@@ -1002,9 +1084,27 @@ function updateFloatingLoader() {
             loadingIcon.classList.add('hidden');
             floatingLoader.classList.remove('loading');
         }
+
+        // Stop / Resume button
+        const stopBtn = document.getElementById('stop-resume-btn');
+        if (stopBtn) {
+            if (isLoading) {
+                stopBtn.style.display = 'block';
+                stopBtn.textContent = '◼ Arrêter';
+                stopBtn.classList.remove('is-resume');
+            } else if (loadingAborted) {
+                stopBtn.style.display = 'block';
+                stopBtn.textContent = '▶ Reprendre';
+                stopBtn.classList.add('is-resume');
+            } else {
+                stopBtn.style.display = 'none';
+            }
+        }
         
-        // Update background color based on auto-scroll state
-        if (autoScrollEnabled) {
+        // Update background color: black in paused state, else based on auto-scroll
+        if (loadingAborted) {
+            floatingLoader.style.backgroundColor = 'black';
+        } else if (autoScrollEnabled) {
             floatingLoader.style.backgroundColor = 'var(--green)';
         } else {
             floatingLoader.style.backgroundColor = 'var(--orange)';
@@ -1043,6 +1143,28 @@ function toggleAutoScroll() {
     }
     
     updateFloatingLoader();
+}
+
+/**
+ * Stop ongoing collection loading
+ */
+function stopLoading() {
+    loadingAborted = true;
+    stateManager.set('isLoading', false);
+    updateFloatingLoader();
+    showSnackbar('⏸ Chargement mis en pause. Clique sur "Reprendre" pour continuer.');
+}
+
+/**
+ * Resume collection loading from current offset
+ */
+function resumeLoading() {
+    if (!savedLoadParams) return;
+    loadingAborted = false;
+    stateManager.set('isLoading', true);
+    updateFloatingLoader();
+    const { numberToLoad, loadAllCollection, endOffset } = savedLoadParams;
+    loadNewPageFromQueryData(numberToLoad, loadAllCollection, endOffset);
 }
 
 /**
